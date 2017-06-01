@@ -1,5 +1,11 @@
 # AdvZoo
 
+The goal of this project:
+* Several datasets ready to use: MNIST, CIFAR-10, ImageNet-ILSVRC and more.
+* Pre-trained really state-of-the-art models to attack.
+* Existing attacking methods.
+* Existing defense methods.
+
 ### 1. Install dependencies.
 
 ```bash
