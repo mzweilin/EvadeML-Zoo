@@ -85,7 +85,7 @@ class MNISTDataset:
         X_test = X_test.reshape(X_test.shape[0], self.image_size, self.image_size, self.num_channels)
         return X_test, Y_test
 
-    def load_model_by_name(self, model_name):
+    def load_model_by_name(self, model_name, logits=False, scaling=False):
         if model_name not in ["cleverhans", 'cleverhans_adv_trained']:
             raise ("Undefined model [%s] for %s." % (model_name, self.dataset_name))
         self.model_name = model_name
@@ -94,8 +94,8 @@ class MNISTDataset:
         model_weights_fpath = os.path.join('trained_models', model_weights_fpath)
 
         # self.maybe_download_model()
-        model = cnn_model(logits=False, img_rows=28, img_cols=28,
-                channels=1, nb_filters=64, nb_classes=10)
+        model = cnn_model(logits=logits, img_rows=28, img_cols=28,
+                channels=1, nb_filters=64, nb_classes=10, scaling=scaling)
         print("\n===Defined TensorFlow model graph.")
         model.load_weights(model_weights_fpath)
         print ("---Loaded MNIST-%s model.\n" % model_name)

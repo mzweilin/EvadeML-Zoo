@@ -4,6 +4,7 @@ import numpy as np
 import os
 
 from cleverhans_wrapper import generate_fgsm_examples, generate_jsma_examples, generate_bim_examples
+from carlini_wrapper import generate_carlini_l2_examples
 
 def isfloat(value):
     try:
@@ -43,7 +44,13 @@ def parse_attack_string(attack_string):
     attack_params = dict( (k, v if len(v)>1 else v[0] ) for k,v in attack_params.iteritems())
 
     for k,v in attack_params.iteritems():
-        if isfloat(v):
+        if k in ['batch_size', 'max_iterations']:
+            attack_params[k] = int(v)
+        elif v == 'true':
+            attack_params[k] = True
+        elif v == 'false':
+            attack_params[k] = False
+        elif isfloat(v):
             attack_params[k] = float(v)
     return attack_name, attack_params
 
@@ -55,8 +62,9 @@ def generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params):
         X_adv = generate_jsma_examples(sess, model, x, y, X, Y, attack_params)
     elif attack_name == 'bim':
         X_adv = generate_bim_examples(sess, model, x, y, X, Y, attack_params)
-    elif attack_name == 'carlini_l2':
-        X_adv = generate_Carlini_l2_examples(sess, predictions, x, X, attack_params)
+    elif attack_name == 'carlinil2':
+        X_adv = generate_carlini_l2_examples(sess, model, x, y, X, Y, attack_params)
+        
 
     return X_adv
 

@@ -21,7 +21,8 @@ FLAGS = flags.FLAGS
 # Arguments for task scheduling
 flags.DEFINE_string('dataset_name', 'MNIST', 'dataset name.')
 flags.DEFINE_string('model_name', 'cleverhans', '')
-flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next", '')
+# flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next", '')
+flags.DEFINE_string('attacks', "CarliniL2?targeted=next&batch_size=100&max_iterations=100", '')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples as image or not.')
 flags.DEFINE_string('defense', 'feature_squeezing', '')
 flags.DEFINE_integer('nb_examples', 100, '')
@@ -65,7 +66,9 @@ def main(argv=None):
     with tf.variable_scope(FLAGS.model_name):
         model = dataset.load_model_by_name(FLAGS.model_name)
         model.compile(loss='categorical_crossentropy',optimizer='sgd', metrics=['acc'])
-        predictions = model(x)
+
+        model_carlini = dataset.load_model_by_name(FLAGS.model_name, logits=True, scaling=True)
+        model_carlini.compile(loss='categorical_crossentropy',optimizer='sgd', metrics=['acc'])
 
 
     # 3. Evaluate the trained model.
@@ -110,12 +113,17 @@ def main(argv=None):
         else:
             targeted = False
 
+        if 'carlini' in attack_name:
+            target_model = model_carlini
+        else:
+            target_model = model
+
         x_adv_fname = "%s_%d_%s_%s.pickle" % (FLAGS.dataset_name, FLAGS.nb_examples, FLAGS.model_name, attack_string)
         x_adv_fpath = os.path.join(FLAGS.result_folder, x_adv_fname)
         # x_adv_fpath = False
 
         time_start = time.time()
-        X_test_adv = maybe_generate_adv_examples(sess, model, x, y, X_test, Y_test, attack_name, attack_params, use_cache = x_adv_fpath)
+        X_test_adv = maybe_generate_adv_examples(sess, target_model, x, y, X_test, Y_test, attack_name, attack_params, use_cache = x_adv_fpath)
         duration = time.time() - time_start
         X_test_adv_list.append(X_test_adv)
 
