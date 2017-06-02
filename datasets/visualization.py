@@ -30,7 +30,8 @@ def show_imgs_in_rows(rows, fpath):
     for imgs in rows:
         imgs_row = list(imgs)
         for img_array in imgs_row:
-            img = Image.fromarray(np.squeeze(img_array)*255)
+            # pdb.set_trace()
+            img = Image.fromarray((np.squeeze(img_array)*255).astype(np.uint8))
             new_im.paste(img, (x_offset,y_offset))
             x_offset += img_width + x_margin
 

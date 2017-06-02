@@ -44,14 +44,14 @@ def load_tf_session():
 
 def main(argv=None):
     # 1. Load a dataset.
-    from datasets import MNISTDataset
+    from datasets import MNISTDataset, CIFAR10Dataset
     from datasets import get_correct_prediction_idx, calculate_mean_confidence, calculate_accuracy, calculate_mean_distance
 
     if FLAGS.dataset_name == "MNIST":
         dataset = MNISTDataset()
-    elif dataset_name == "CIFAR-10":
+    elif FLAGS.dataset_name == "CIFAR-10":
         dataset = CIFAR10Dataset()
-    elif dataset_name == "ImageNet":
+    elif FLAGS.dataset_name == "ImageNet":
         dataset = ImageNetDataset()
 
     print ("\n===Loading %s data..." % FLAGS.dataset_name)

@@ -1,8 +1,8 @@
+from keras.datasets import mnist
+from keras.utils import np_utils
+
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from utils import load_externals
-from cleverhans.utils_mnist import data_mnist
 
 from models.carlini_models import carlini_mnist_model
 from models.cleverhans_models import cleverhans_mnist_model
@@ -13,13 +13,16 @@ class MNISTDataset:
         self.dataset_name = "MNIST"
         self.image_size = 28
         self.num_channels = 1
-        self.num_classes = 10            
-        # self.maybe_download_model = maybe_download_mnist_model
-        self.result_folder = 'results/mnist'
+        self.num_classes = 10
 
     def get_test_dataset(self):
-        _, _, X_test, Y_test = data_mnist()
+        (X_train, y_train), (X_test, y_test) = mnist.load_data()
+        
         X_test = X_test.reshape(X_test.shape[0], self.image_size, self.image_size, self.num_channels)
+        X_test = X_test.astype('float32')
+        X_test /= 255
+        Y_test = np_utils.to_categorical(y_test, self.num_classes)
+        
         return X_test, Y_test
 
     def load_model_by_name(self, model_name, logits=False, scaling=False):

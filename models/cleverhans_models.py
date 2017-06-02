@@ -14,6 +14,11 @@ def cleverhans_mnist_model(logits=True, scaling = True):
     nb_classes = 10
     return cleverhans_model(input_shape, nb_filters, nb_classes, logits=logits, scaling=scaling)
 
+def cleverhans_cifar10_model(logits=True, scaling = True):
+    input_shape = (32, 32, 3)
+    nb_filters = 64
+    nb_classes = 10
+    return cleverhans_model(input_shape, nb_filters, nb_classes, logits=logits, scaling=scaling)
 
 def cleverhans_model(input_shape, nb_filters, nb_classes, logits=False, scaling=False):
     """
