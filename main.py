@@ -14,15 +14,16 @@ import tensorflow as tf
 from tensorflow.python.platform import app
 from tensorflow.python.platform import flags
 
-from datasets.mnist import MNISTDataset
+
 
 FLAGS = flags.FLAGS
 
 # Arguments for task scheduling
 flags.DEFINE_string('dataset_name', 'MNIST', 'dataset name.')
-flags.DEFINE_string('model_name', 'cleverhans', '')
-# flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next", '')
-flags.DEFINE_string('attacks', "CarliniL2?targeted=next&batch_size=100&max_iterations=100", '')
+# flags.DEFINE_string('model_name', 'cleverhans', '')
+flags.DEFINE_string('model_name', 'carlini', '')
+flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next", '')
+# flags.DEFINE_string('attacks', "CarliniL2?targeted=next&batch_size=100&max_iterations=100", '')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples as image or not.')
 flags.DEFINE_string('defense', 'feature_squeezing', '')
 flags.DEFINE_integer('nb_examples', 100, '')
@@ -43,6 +44,7 @@ def load_tf_session():
 
 def main(argv=None):
     # 1. Load a dataset.
+    from datasets import MNISTDataset
     from datasets import get_correct_prediction_idx, calculate_mean_confidence, calculate_accuracy, calculate_mean_distance
 
     if FLAGS.dataset_name == "MNIST":
