@@ -1,10 +1,13 @@
+from future.standard_library import install_aliases
+install_aliases()
+from urllib import parse as urlparse
+
 import pickle
-import urlparse
 import numpy as np
 import os
 
-from cleverhans_wrapper import generate_fgsm_examples, generate_jsma_examples, generate_bim_examples
-from carlini_wrapper import generate_carlini_l2_examples
+from .cleverhans_wrapper import generate_fgsm_examples, generate_jsma_examples, generate_bim_examples
+from .carlini_wrapper import generate_carlini_l2_examples
 
 def isfloat(value):
     try:
@@ -26,7 +29,7 @@ def maybe_generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_par
         x_adv_fpath = use_cache
 
         if os.path.isfile(x_adv_fpath):
-            X_adv = pickle.load(open(x_adv_fpath))
+            X_adv = pickle.load(open(x_adv_fpath, "rb"))
         else:
             X_adv = generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params)
             pickle.dump(X_adv, open(x_adv_fpath, 'wb'))
@@ -41,9 +44,9 @@ def parse_attack_string(attack_string):
         attack_name, attack_params = attack_string, ''
     attack_name = attack_name.lower()
     attack_params = urlparse.parse_qs(attack_params)
-    attack_params = dict( (k, v if len(v)>1 else v[0] ) for k,v in attack_params.iteritems())
+    attack_params = dict( (k, v if len(v)>1 else v[0] ) for k,v in attack_params.items())
 
-    for k,v in attack_params.iteritems():
+    for k,v in attack_params.items():
         if k in ['batch_size', 'max_iterations']:
             attack_params[k] = int(v)
         elif v == 'true':

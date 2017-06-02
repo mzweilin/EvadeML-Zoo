@@ -2,6 +2,7 @@ import numpy as np
 import pdb
 
 def get_first_example_id_each_class(Y_test):
+    # pdb.set_trace()
     num_classes = Y_test.shape[1]
     Y_test_labels = np.argmax(Y_test, axis=1)
     selected_idx = [ np.where(Y_test_labels==i)[0][0] for i in range(num_classes)]

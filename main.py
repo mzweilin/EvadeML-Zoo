@@ -22,12 +22,13 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('dataset_name', 'MNIST', 'dataset name.')
 # flags.DEFINE_string('model_name', 'cleverhans', '')
 flags.DEFINE_string('model_name', 'carlini', '')
-flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next", '')
-# flags.DEFINE_string('attacks', "CarliniL2?targeted=next&batch_size=100&max_iterations=100", '')
+flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000", '')
+# flags.DEFINE_string('attacks', "CarliniL2?targeted=next&batch_size=100&max_iterations=1000", '')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples as image or not.')
 flags.DEFINE_string('defense', 'feature_squeezing', '')
 flags.DEFINE_integer('nb_examples', 100, '')
 flags.DEFINE_string('result_folder', "./results", '')
+flags.DEFINE_boolean('test_mode', True, '')
 # flags.DEFINE_string('', '', '')
 
 
@@ -66,7 +67,7 @@ def main(argv=None):
     y = tf.placeholder(tf.float32, shape=(None, dataset.num_classes))
 
     with tf.variable_scope(FLAGS.model_name):
-        model = dataset.load_model_by_name(FLAGS.model_name)
+        model = dataset.load_model_by_name(FLAGS.model_name, logits=False, scaling=False)
         model.compile(loss='categorical_crossentropy',optimizer='sgd', metrics=['acc'])
 
         model_carlini = dataset.load_model_by_name(FLAGS.model_name, logits=True, scaling=True)
@@ -83,11 +84,14 @@ def main(argv=None):
 
 
     # 4. Select some examples to attack.
-    if FLAGS.dataset_name == 'ImageNet':
-        selected_idx = get_correct_prediction_idx(Y_pred_all, Y_test_all)
-        selected_idx = selected_idx[:FLAGS.nb_examples]
+    from datasets import get_first_example_id_each_class
+    correct_idx = get_correct_prediction_idx(Y_pred_all, Y_test_all)
+    if FLAGS.test_mode:
+        correct_and_selected_idx = get_first_example_id_each_class(Y_test_all[correct_idx])
+        selected_idx = [ correct_idx[i] for i in correct_and_selected_idx ]
     else:
-        selected_idx = xrange(FLAGS.nb_examples)
+        selected_idx = selected_idx[:FLAGS.nb_examples]
+
     X_test, Y_test, Y_pred = X_test_all[selected_idx], Y_test_all[selected_idx], Y_pred_all[selected_idx]
 
     accuracy_selected = calculate_accuracy(Y_pred, Y_test)
@@ -120,7 +124,7 @@ def main(argv=None):
         else:
             target_model = model
 
-        x_adv_fname = "%s_%d_%s_%s.pickle" % (FLAGS.dataset_name, FLAGS.nb_examples, FLAGS.model_name, attack_string)
+        x_adv_fname = "%s_%d_%s_%s.pickle" % (FLAGS.dataset_name, len(X_test), FLAGS.model_name, attack_string)
         x_adv_fpath = os.path.join(FLAGS.result_folder, x_adv_fname)
         # x_adv_fpath = False
 
@@ -136,7 +140,7 @@ def main(argv=None):
             Y_test_target = Y_test_target_next
         else:
             Y_test_target = Y_test
-
+        # pdb.set_trace()
         success_rate = calculate_accuracy(Y_test_adv_pred, Y_test_target)
         mean_conf = calculate_mean_confidence(Y_test_adv_pred, Y_test_target)
         if targeted is False:
@@ -155,7 +159,6 @@ def main(argv=None):
         print ("Duration: %.4f per sample" % dur_per_sample)
 
     if FLAGS.visualize is True:
-        from datasets import get_first_example_id_each_class
         from datasets.visualization import show_imgs_in_rows
         selected_idx = get_first_example_id_each_class(Y_test)
         
