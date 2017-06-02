@@ -28,7 +28,7 @@ flags.DEFINE_boolean('visualize', True, 'Output the image examples as image or n
 flags.DEFINE_string('defense', 'feature_squeezing', '')
 flags.DEFINE_integer('nb_examples', 100, '')
 flags.DEFINE_string('result_folder', "./results", '')
-flags.DEFINE_boolean('test_mode', True, '')
+flags.DEFINE_boolean('test_mode', False, '')
 # flags.DEFINE_string('', '', '')
 
 
@@ -156,7 +156,7 @@ def main(argv=None):
 
         print ("\n---Attack: %s" % attack_string)
         print ("Success rate: %.2f%%, Mean confidence: %.2f%%" % (success_rate*100, mean_conf*100))
-        num_pixels = X_test.shape[1] * X_test.shape[2]
+        num_pixels = X_test.shape[1] * X_test.shape[2] * X_test.shape[3]
         l0_percent = float(mean_l0_dist/num_pixels) * 100
         print ("L2 dist: %.4f, Li dist: %.4f, L0 dist: %d/%d (%.1f%%)" % (mean_l2_dist, mean_li_dist, mean_l0_dist, num_pixels, l0_percent))
         print ("Duration: %.4f per sample" % dur_per_sample)
