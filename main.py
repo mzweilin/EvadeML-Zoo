@@ -22,7 +22,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('dataset_name', 'MNIST', 'dataset name.')
 # flags.DEFINE_string('model_name', 'cleverhans', '')
 flags.DEFINE_string('model_name', 'carlini', '')
-flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000", '')
+flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000;CarliniL2?targeted=next&batch_size=10&max_iterations=1000&confidence=2", '')
 # flags.DEFINE_string('attacks', "CarliniL2?targeted=next&batch_size=100&max_iterations=1000", '')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples as image or not.')
 flags.DEFINE_string('defense', 'feature_squeezing', '')
@@ -84,13 +84,16 @@ def main(argv=None):
 
 
     # 4. Select some examples to attack.
+    # TODO: select the target class: least likely, next, all?
     from datasets import get_first_example_id_each_class
+    # It doesn't make sense to attack with a misclassified example.
     correct_idx = get_correct_prediction_idx(Y_pred_all, Y_test_all)
     if FLAGS.test_mode:
+        # Only select the first example of each class.
         correct_and_selected_idx = get_first_example_id_each_class(Y_test_all[correct_idx])
         selected_idx = [ correct_idx[i] for i in correct_and_selected_idx ]
     else:
-        selected_idx = selected_idx[:FLAGS.nb_examples]
+        selected_idx = correct_idx[:FLAGS.nb_examples]
 
     X_test, Y_test, Y_pred = X_test_all[selected_idx], Y_test_all[selected_idx], Y_pred_all[selected_idx]
 
@@ -116,8 +119,10 @@ def main(argv=None):
 
         if 'targeted' in attack_params:
             targeted = attack_params['targeted']
+            Y_test_target = Y_test_target_next
         else:
             targeted = False
+            Y_test_target = Y_test
 
         if 'carlini' in attack_name:
             target_model = model_carlini
@@ -127,19 +132,17 @@ def main(argv=None):
         x_adv_fname = "%s_%d_%s_%s.pickle" % (FLAGS.dataset_name, len(X_test), FLAGS.model_name, attack_string)
         x_adv_fpath = os.path.join(FLAGS.result_folder, x_adv_fname)
         # x_adv_fpath = False
+            
 
         time_start = time.time()
-        X_test_adv = maybe_generate_adv_examples(sess, target_model, x, y, X_test, Y_test, attack_name, attack_params, use_cache = x_adv_fpath)
+        X_test_adv = maybe_generate_adv_examples(sess, target_model, x, y, X_test, Y_test_target, attack_name, attack_params, use_cache = x_adv_fpath)
         duration = time.time() - time_start
         X_test_adv_list.append(X_test_adv)
 
         # 5.1. Evaluate the quality of adversarial examples
         Y_test_adv_pred = model.predict(X_test_adv)
 
-        if targeted:
-            Y_test_target = Y_test_target_next
-        else:
-            Y_test_target = Y_test
+
         # pdb.set_trace()
         success_rate = calculate_accuracy(Y_test_adv_pred, Y_test_target)
         mean_conf = calculate_mean_confidence(Y_test_adv_pred, Y_test_target)

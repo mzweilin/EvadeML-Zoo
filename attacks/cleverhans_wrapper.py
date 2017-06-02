@@ -54,14 +54,7 @@ def generate_bim_examples(sess, model, x, y, X, Y, attack_params):
 from cleverhans.attacks import SaliencyMapMethod
 def generate_jsma_examples(sess, model, x, y, X, Y, attack_params):
     targeted = attack_params['targeted']
-    if targeted == 'next':
-        # Generate i + 1 (mod 10) as the target classes.
-        from attacks import get_next_class
-        Y_target = get_next_class(Y)
-    elif targeted == 'no':
-        Y_target = Y
-    else:
-        raise ("Unsurpoted targeted mode: %s" % targeted)
+    Y_target = Y
 
     nb_classes = Y.shape[1]
 
