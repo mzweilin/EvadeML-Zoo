@@ -1,15 +1,9 @@
 from squeeze import reduce_precision_np, median_filter_np
 
-import csv
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-def write_to_csv(li, fpath, fieldnames):
-    with open(fpath, 'w') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        for di in li:
-            writer.writerow(di)
-            
-
+from utils.output import write_to_csv
 
 def calculate_squeezed_accuracy(model, Y, X, X_adv, output_csv_fpath):
     to_csv_1 = calculate_median_smoothed_accuracy(model, Y, X, X_adv)

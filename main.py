@@ -43,10 +43,11 @@ def load_tf_session():
     print("Created TensorFlow session and set Keras backend.")
     return sess
 
+
 def main(argv=None):
     # 1. Load a dataset.
-    from datasets import MNISTDataset, CIFAR10Dataset
-    from datasets import get_correct_prediction_idx, calculate_mean_confidence, calculate_accuracy, calculate_mean_distance
+    from datasets import MNISTDataset, CIFAR10Dataset, ImageNetDataset
+    from datasets import get_correct_prediction_idx, evaluate_adversarial_examples, calculate_mean_confidence, calculate_accuracy
 
     if FLAGS.dataset_name == "MNIST":
         dataset = MNISTDataset()
@@ -73,7 +74,7 @@ def main(argv=None):
         model_carlini = dataset.load_model_by_name(FLAGS.model_name, logits=True, scaling=True)
         model_carlini.compile(loss='categorical_crossentropy',optimizer='sgd', metrics=['acc'])
 
-
+    # pdb.set_trace()
     # 3. Evaluate the trained model.
     Y_pred_all = model.predict(X_test_all)
     mean_conf_all = calculate_mean_confidence(Y_pred_all, Y_test_all)
@@ -82,7 +83,8 @@ def main(argv=None):
     print('Test accuracy on raw legitimate examples %.4f' % (accuracy_all))
     print('Mean confidence on ground truth classes %.4f' % (mean_conf_all))
 
-
+    if FLAGS.dataset_name == 'ImageNet':
+        return
     # 4. Select some examples to attack.
     # TODO: select the target class: least likely, next, all?
     from datasets import get_first_example_id_each_class
@@ -106,6 +108,7 @@ def main(argv=None):
 
     # 5. Generate adversarial examples.
     from attacks import maybe_generate_adv_examples, parse_attack_string
+    from defenses.feature_squeezing.squeeze import reduce_precision_np
 
     # Generate i + 1 (mod 10) as the target classes.
     from attacks import get_next_class
@@ -114,6 +117,8 @@ def main(argv=None):
     X_test_adv_list = []
 
     attack_string_list = filter(lambda x:len(x)>0, FLAGS.attacks.split(';'))
+    to_csv = []
+    from utils.output import write_to_csv
     for attack_string in attack_string_list:
         attack_name, attack_params = parse_attack_string(attack_string)
 
@@ -122,6 +127,8 @@ def main(argv=None):
             Y_test_target = Y_test_target_next
         else:
             targeted = False
+            attack_params['targeted'] = False
+            # TODO: only adding the param for Carlini's attacks.
             Y_test_target = Y_test
 
         if 'carlini' in attack_name:
@@ -139,27 +146,36 @@ def main(argv=None):
         duration = time.time() - time_start
         X_test_adv_list.append(X_test_adv)
 
-        # 5.1. Evaluate the quality of adversarial examples
-        Y_test_adv_pred = model.predict(X_test_adv)
-
-
-        # pdb.set_trace()
-        success_rate = calculate_accuracy(Y_test_adv_pred, Y_test_target)
-        mean_conf = calculate_mean_confidence(Y_test_adv_pred, Y_test_target)
-        if targeted is False:
-            success_rate = 1 - success_rate
-            mean_conf = 1 - mean_conf
-
-        mean_l2_dist, mean_li_dist, mean_l0_dist = calculate_mean_distance(X_test, X_test_adv)
-
         dur_per_sample = duration / len(X_test_adv)
 
+        # 5.1. Evaluate the quality of adversarial examples
+
+        model_predict = lambda x: model.predict(x)
+
+        
         print ("\n---Attack: %s" % attack_string)
-        print ("Success rate: %.2f%%, Mean confidence: %.2f%%" % (success_rate*100, mean_conf*100))
-        num_pixels = X_test.shape[1] * X_test.shape[2] * X_test.shape[3]
-        l0_percent = float(mean_l0_dist/num_pixels) * 100
-        print ("L2 dist: %.4f, Li dist: %.4f, L0 dist: %d/%d (%.1f%%)" % (mean_l2_dist, mean_li_dist, mean_l0_dist, num_pixels, l0_percent))
-        print ("Duration: %.4f per sample" % dur_per_sample)
+        rec = evaluate_adversarial_examples(X_test, X_test_adv, Y_test_target, targeted, model_predict)
+        rec['dataset_name'] = FLAGS.dataset_name
+        rec['model_name'] = FLAGS.model_name
+        rec['attack_string'] = attack_string
+        rec['duration_per_sample'] = dur_per_sample
+        rec['discretization'] = False
+        to_csv.append(rec)
+
+        print ("\n---Attack: %s" % attack_string)
+        X_test_adv_discret = reduce_precision_np(X_test_adv, 256)
+        rec = evaluate_adversarial_examples(X_test, X_test_adv_discret, Y_test_target, targeted, model_predict)
+        rec['dataset_name'] = FLAGS.dataset_name
+        rec['model_name'] = FLAGS.model_name
+        rec['attack_string'] = attack_string
+        rec['duration_per_sample'] = dur_per_sample
+        rec['discretization'] = False
+        to_csv.append(rec)
+
+    attacks_evaluation_csv_fpath = os.path.join(FLAGS.result_folder, "%s_%s_attacks_evaluation.csv" % (FLAGS.dataset_name, FLAGS.model_name))
+    if not os.path.isfile(attacks_evaluation_csv_fpath):
+        fieldnames = ['dataset_name', 'model_name', 'attack_string', 'success_rate', 'mean_confidence', 'mean_l2_dist', 'mean_li_dist', 'mean_l0_dist_value', 'mean_l0_dist_pixel', 'duration_per_sample']
+        write_to_csv(to_csv, attacks_evaluation_csv_fpath, fieldnames)
 
     if FLAGS.visualize is True:
         from datasets.visualization import show_imgs_in_rows
@@ -181,7 +197,7 @@ def main(argv=None):
         """
         from defenses.feature_squeezing.robustness import calculate_squeezed_accuracy
         
-        for attack_string, X_test_adv in zip(FLAGS.attacks, X_test_adv_list):
+        for attack_string, X_test_adv in zip(attack_string_list, X_test_adv_list):
             csv_fpath = "%s_%d_%s_%s_robustness.csv" % (dataset.dataset_name, FLAGS.nb_examples, dataset.model_name, attack_string)
             csv_fpath = os.path.join(FLAGS.result_folder, csv_fpath)
 
