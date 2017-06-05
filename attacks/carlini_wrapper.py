@@ -1,5 +1,6 @@
 import sys, os
 import pdb
+import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils import load_externals
@@ -39,6 +40,10 @@ def generate_carlini_l2_examples(sess, model_logits, x, y, X, Y, attack_params):
         if k not in accepted_params:
             raise ("Unsuporrted params in Carlini L2: %s" % k)
 
+    # assert batch_size <= len(X)
+    if 'batch_size' in attack_params and attack_params['batch_size'] > len(X):
+        attack_params['batch_size'] = len(X)
+
     attack = CarliniL2(sess, model_wrapper, **attack_params)
     X_scaled = X - 0.5
     X_adv = attack.attack(X_scaled, Y)
@@ -52,14 +57,27 @@ def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params):
 
     model_wrapper = CarliniModelWrapper(model_logits, image_size=image_size, num_channels=num_channels, num_labels=num_labels)
 
+    if 'batch_size' in attack_params:
+        batch_size = attack_params['batch_size']
+        del attack_params['batch_size']
+    else:
+        batch_size= 10
+
     accepted_params = ['targeted', 'learning_rate', 'max_iterations', 'abort_early', 'initial_const', 'largest_const', 'reduce_const', 'decrease_factor', 'const_factor']
     for k in attack_params:
         if k not in accepted_params:
             raise ("Unsuporrted params in Carlini Li: %s" % k)
 
     attack = CarliniLi(sess, model_wrapper, **attack_params)
-    X_scaled = X - 0.5
-    X_adv = attack.attack(X_scaled, Y)
+    
+    X_adv_list = []
+    for i in np.arange(0, len(X), batch_size):
+        X_sub = X[i:min(i+batch_size, len(X)),:]
+        X_scaled = X_sub - 0.5
+        X_adv_sub = attack.attack(X_scaled, Y)
+        X_adv_list.append(X_adv_sub)
+
+    X_adv = np.vstack(X_adv_list)
     return X_adv + 0.5
 
 
@@ -70,12 +88,25 @@ def generate_carlini_l0_examples(sess, model_logits, x, y, X, Y, attack_params):
 
     model_wrapper = CarliniModelWrapper(model_logits, image_size=image_size, num_channels=num_channels, num_labels=num_labels)
 
+    if 'batch_size' in attack_params:
+        batch_size = attack_params['batch_size']
+        del attack_params['batch_size']
+    else:
+        batch_size= 10
+
     accepted_params = ['targeted', 'learning_rate', 'max_iterations', 'abort_early', 'initial_const', 'largest_const', 'reduce_const', 'decrease_factor', 'const_factor', 'independent_channels']
     for k in attack_params:
         if k not in accepted_params:
             raise ("Unsuporrted params in Carlini L0: %s" % k)
 
     attack = CarliniL0(sess, model_wrapper, **attack_params)
-    X_scaled = X - 0.5
-    X_adv = attack.attack(X_scaled, Y)
+
+    X_adv_list = []
+    for i in np.arange(0, len(X), batch_size):
+        X_sub = X[i:min(i+batch_size, len(X)), :]
+        X_scaled = X_sub - 0.5
+        X_adv_sub = attack.attack(X_scaled, Y)
+        X_adv_list.append(X_adv_sub)
+
+    X_adv = np.vstack(X_adv_list)
     return X_adv + 0.5
