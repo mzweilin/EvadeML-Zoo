@@ -64,7 +64,6 @@ def generate_jsma_examples(sess, model, x, y, X, Y, attack_params):
                    'clip_max': 1., 'targets': y,
                    'y_val': None}
 
-    
     adv_x_list = []
 
     num_examples = 100000

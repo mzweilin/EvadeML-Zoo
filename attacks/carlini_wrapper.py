@@ -28,7 +28,6 @@ class CarliniModelWrapper:
 
 
 from nn_robust_attacks.l2_attack import CarliniL2
-
 def generate_carlini_l2_examples(sess, model_logits, x, y, X, Y, attack_params):
     image_size, num_channels = X.shape[1], X.shape[3]
     num_labels = Y.shape[1]
@@ -41,6 +40,42 @@ def generate_carlini_l2_examples(sess, model_logits, x, y, X, Y, attack_params):
             raise ("Unsuporrted params in Carlini L2: %s" % k)
 
     attack = CarliniL2(sess, model_wrapper, **attack_params)
+    X_scaled = X - 0.5
+    X_adv = attack.attack(X_scaled, Y)
+    return X_adv + 0.5
+
+
+from nn_robust_attacks.li_attack import CarliniLi
+def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params):
+    image_size, num_channels = X.shape[1], X.shape[3]
+    num_labels = Y.shape[1]
+
+    model_wrapper = CarliniModelWrapper(model_logits, image_size=image_size, num_channels=num_channels, num_labels=num_labels)
+
+    accepted_params = ['targeted', 'learning_rate', 'max_iterations', 'abort_early', 'initial_const', 'largest_const', 'reduce_const', 'decrease_factor', 'const_factor']
+    for k in attack_params:
+        if k not in accepted_params:
+            raise ("Unsuporrted params in Carlini Li: %s" % k)
+
+    attack = CarliniLi(sess, model_wrapper, **attack_params)
+    X_scaled = X - 0.5
+    X_adv = attack.attack(X_scaled, Y)
+    return X_adv + 0.5
+
+
+from nn_robust_attacks.l0_attack import CarliniL0
+def generate_carlini_l0_examples(sess, model_logits, x, y, X, Y, attack_params):
+    image_size, num_channels = X.shape[1], X.shape[3]
+    num_labels = Y.shape[1]
+
+    model_wrapper = CarliniModelWrapper(model_logits, image_size=image_size, num_channels=num_channels, num_labels=num_labels)
+
+    accepted_params = ['targeted', 'learning_rate', 'max_iterations', 'abort_early', 'initial_const', 'largest_const', 'reduce_const', 'decrease_factor', 'const_factor', 'independent_channels']
+    for k in attack_params:
+        if k not in accepted_params:
+            raise ("Unsuporrted params in Carlini L0: %s" % k)
+
+    attack = CarliniL0(sess, model_wrapper, **attack_params)
     X_scaled = X - 0.5
     X_adv = attack.attack(X_scaled, Y)
     return X_adv + 0.5

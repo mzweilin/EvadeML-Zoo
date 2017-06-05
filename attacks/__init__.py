@@ -7,7 +7,7 @@ import numpy as np
 import os
 
 from .cleverhans_wrapper import generate_fgsm_examples, generate_jsma_examples, generate_bim_examples
-from .carlini_wrapper import generate_carlini_l2_examples
+from .carlini_wrapper import generate_carlini_l2_examples, generate_carlini_li_examples, generate_carlini_l0_examples
 
 def isfloat(value):
     try:
@@ -23,7 +23,7 @@ def get_next_class(Y_test):
     Y_test_labels = (Y_test_labels + 1) % num_classes
     return np.eye(num_classes)[Y_test_labels]
 
-
+# TODO: replace pickle with .h5
 def maybe_generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, use_cache = False):
     if use_cache:
         x_adv_fpath = use_cache
@@ -67,6 +67,10 @@ def generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params):
         X_adv = generate_bim_examples(sess, model, x, y, X, Y, attack_params)
     elif attack_name == 'carlinil2':
         X_adv = generate_carlini_l2_examples(sess, model, x, y, X, Y, attack_params)
+    elif attack_name == 'carlinili':
+        X_adv = generate_carlini_li_examples(sess, model, x, y, X, Y, attack_params)
+    elif attack_name == 'carlinil0':
+        X_adv = generate_carlini_l0_examples(sess, model, x, y, X, Y, attack_params)
         
 
     return X_adv
