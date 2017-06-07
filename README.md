@@ -7,17 +7,13 @@ The goal of this project:
 * Visualization of adversarial examples.
 * Existing defense methods.
 
-### 1. Install dependencies.
+## 1. Install dependencies.
 
 ```bash
 pip install tensorflow-gpu==1.1.0 keras==2.0.4 matplotlib h5py pillow scikit-learn click future
 ```
-### 2. Run the experiment.
-```bash
-python main.py --dataset_name MNIST --model_name carlini --nb_examples 100 --attacks "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=100&max_iterations=1000;CarliniL2?targeted=next&batch_size=100&max_iterations=1000&confidence=2;CarliniLi?targeted=next;CarliniL0?targeted=next;" --defense feature_squeezing
-```
 
-### 3. Usage of `python main.py`
+## 2. Usage of `python main.py`
 ```bash
 usage: main.py [-h] [--dataset_name DATASET_NAME] [--nb_examples NB_EXAMPLES]
                [--test_mode [TEST_MODE]] [--notest_mode]
@@ -46,4 +42,9 @@ optional arguments:
   --defense DEFENSE     Supported: feature_squeezing (robustness&detection).
   --result_folder RESULT_FOLDER
                         The output folder for results.
+```
+
+### Example.
+```bash
+python main.py --dataset_name MNIST --model_name carlini --nb_examples 100 --attacks "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=100&max_iterations=1000;CarliniL2?targeted=next&batch_size=100&max_iterations=1000&confidence=2;CarliniLi?targeted=next;CarliniL0?targeted=next;" --defense feature_squeezing
 ```
