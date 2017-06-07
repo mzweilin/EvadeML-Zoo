@@ -66,7 +66,6 @@ def generate_jsma_examples(sess, model, x, y, X, Y, attack_params):
 
     adv_x_list = []
 
-    num_examples = 100000
     with click.progressbar(range(0, len(X)), file=sys.stderr, show_pos=True, 
                            width=40, bar_template='  [%(bar)s] JSMA Attacking %(info)s', 
                            fill_char='>', empty_char='-') as bar:

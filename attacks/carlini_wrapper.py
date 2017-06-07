@@ -1,10 +1,21 @@
 import sys, os
+import click
 import pdb
 import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils import load_externals
 from nn_robust_attacks import l2_attack#, li_attack, l0_attack
+
+def disablePrint():
+    sys.stdout.flush()
+    sys.stdout = open(os.devnull, 'w')
+
+
+def enablePrint():
+    sys.stdout = sys.__stdout__
+    sys.stdout.flush()
+
 
 class CarliniModelWrapper:
     def __init__(self, logits, image_size, num_channels, num_labels):
@@ -71,11 +82,23 @@ def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params):
     attack = CarliniLi(sess, model_wrapper, **attack_params)
     
     X_adv_list = []
-    for i in np.arange(0, len(X), batch_size):
-        X_sub = X[i:min(i+batch_size, len(X)),:]
-        X_scaled = X_sub - 0.5
-        X_adv_sub = attack.attack(X_scaled, Y)
-        X_adv_list.append(X_adv_sub)
+    # for i in np.arange(0, len(X), batch_size):
+    #     X_sub = X[i:min(i+batch_size, len(X)),:]
+    #     X_scaled = X_sub - 0.5
+    #     X_adv_sub = attack.attack(X_scaled, Y)
+    #     X_adv_list.append(X_adv_sub)
+
+    with click.progressbar(range(0, len(X)), file=sys.stderr, show_pos=True, 
+                           width=40, bar_template='  [%(bar)s] Carlini Li Attacking %(info)s', 
+                           fill_char='>', empty_char='-') as bar:
+        for i in bar:
+            if i % batch_size == 0:
+                X_sub = X[i:min(i+batch_size, len(X)),:]
+                X_scaled = X_sub - 0.5
+                disablePrint()
+                X_adv_sub = attack.attack(X_scaled, Y)
+                enablePrint()
+                X_adv_list.append(X_adv_sub)
 
     X_adv = np.vstack(X_adv_list)
     return X_adv + 0.5
@@ -102,11 +125,23 @@ def generate_carlini_l0_examples(sess, model_logits, x, y, X, Y, attack_params):
     attack = CarliniL0(sess, model_wrapper, **attack_params)
 
     X_adv_list = []
-    for i in np.arange(0, len(X), batch_size):
-        X_sub = X[i:min(i+batch_size, len(X)), :]
-        X_scaled = X_sub - 0.5
-        X_adv_sub = attack.attack(X_scaled, Y)
-        X_adv_list.append(X_adv_sub)
+    # for i in np.arange(0, len(X), batch_size):
+    #     X_sub = X[i:min(i+batch_size, len(X)), :]
+    #     X_scaled = X_sub - 0.5
+    #     X_adv_sub = attack.attack(X_scaled, Y)
+    #     X_adv_list.append(X_adv_sub)
+
+    with click.progressbar(range(0, len(X)), file=sys.stderr, show_pos=True, 
+                           width=40, bar_template='  [%(bar)s] Carlini L0 Attacking %(info)s', 
+                           fill_char='>', empty_char='-') as bar:
+        for i in bar:
+            if i % batch_size == 0:
+                X_sub = X[i:min(i+batch_size, len(X)),:]
+                X_scaled = X_sub - 0.5
+                disablePrint()
+                X_adv_sub = attack.attack(X_scaled, Y)
+                enablePrint()
+                X_adv_list.append(X_adv_sub)
 
     X_adv = np.vstack(X_adv_list)
     return X_adv + 0.5

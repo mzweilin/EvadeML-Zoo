@@ -5,6 +5,7 @@ from urllib import parse as urlparse
 import pickle
 import numpy as np
 import os
+import time
 
 from .cleverhans_wrapper import generate_fgsm_examples, generate_jsma_examples, generate_bim_examples
 from .carlini_wrapper import generate_carlini_l2_examples, generate_carlini_li_examples, generate_carlini_l0_examples
@@ -25,17 +26,18 @@ def get_next_class(Y_test):
 
 # TODO: replace pickle with .h5
 def maybe_generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, use_cache = False):
-    if use_cache:
-        x_adv_fpath = use_cache
-
-        if os.path.isfile(x_adv_fpath):
-            X_adv = pickle.load(open(x_adv_fpath, "rb"))
-        else:
-            X_adv = generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params)
-            pickle.dump(X_adv, open(x_adv_fpath, 'wb'))
+    x_adv_fpath = use_cache
+    if use_cache and os.path.isfile(x_adv_fpath):
+        X_adv, duration = pickle.load(open(x_adv_fpath, "rb"))
     else:
+        time_start = time.time()
         X_adv = generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params)
-    return X_adv
+        duration = time.time() - time_start
+
+        if use_cache:
+            pickle.dump((X_adv, duration), open(x_adv_fpath, 'wb'))
+    return X_adv, duration
+
 
 def parse_attack_string(attack_string):
     if '?' in attack_string:

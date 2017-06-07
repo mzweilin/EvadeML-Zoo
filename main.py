@@ -33,6 +33,7 @@ flags.DEFINE_boolean('test_mode', False, '')
 
 
 
+
 def load_tf_session():
     # Set TF random seed to improve reproducibility
     tf.set_random_seed(1234)
@@ -74,7 +75,7 @@ def main(argv=None):
         model_carlini = dataset.load_model_by_name(FLAGS.model_name, logits=True, scaling=True)
         model_carlini.compile(loss='categorical_crossentropy',optimizer='sgd', metrics=['acc'])
 
-    # pdb.set_trace()
+
     # 3. Evaluate the trained model.
     Y_pred_all = model.predict(X_test_all)
     mean_conf_all = calculate_mean_confidence(Y_pred_all, Y_test_all)
@@ -102,13 +103,15 @@ def main(argv=None):
     accuracy_selected = calculate_accuracy(Y_pred, Y_test)
     mean_conf_selected = calculate_mean_confidence(Y_pred, Y_test)
     print('Test accuracy on selected legitimate examples %.4f' % (accuracy_selected))
-    print('Mean confidence on ground truth classes, selected %.4f' % (mean_conf_selected))
+    print('Mean confidence on ground truth classes, selected %.4f\n' % (mean_conf_selected))
     
 
 
     # 5. Generate adversarial examples.
     from attacks import maybe_generate_adv_examples, parse_attack_string
     from defenses.feature_squeezing.squeeze import reduce_precision_np
+    import hashlib
+    attack_string_hash = hashlib.sha1(FLAGS.attacks).hexdigest()[:5]
 
     # Generate i + 1 (mod 10) as the target classes.
     from attacks import get_next_class
@@ -121,6 +124,7 @@ def main(argv=None):
     from utils.output import write_to_csv
     for attack_string in attack_string_list:
         attack_name, attack_params = parse_attack_string(attack_string)
+        print ( "\nRunning attack: %s %s" % (attack_name, attack_params))
 
         if 'targeted' in attack_params:
             targeted = attack_params['targeted']
@@ -138,12 +142,8 @@ def main(argv=None):
 
         x_adv_fname = "%s_%d_%s_%s.pickle" % (FLAGS.dataset_name, len(X_test), FLAGS.model_name, attack_string)
         x_adv_fpath = os.path.join(FLAGS.result_folder, x_adv_fname)
-        # x_adv_fpath = False
-            
 
-        time_start = time.time()
-        X_test_adv = maybe_generate_adv_examples(sess, target_model, x, y, X_test, Y_test_target, attack_name, attack_params, use_cache = x_adv_fpath)
-        duration = time.time() - time_start
+        X_test_adv, duration = maybe_generate_adv_examples(sess, target_model, x, y, X_test, Y_test_target, attack_name, attack_params, use_cache = x_adv_fpath)
         X_test_adv_list.append(X_test_adv)
 
         dur_per_sample = duration / len(X_test_adv)
@@ -169,12 +169,13 @@ def main(argv=None):
         rec['model_name'] = FLAGS.model_name
         rec['attack_string'] = attack_string
         rec['duration_per_sample'] = dur_per_sample
-        rec['discretization'] = False
+        rec['discretization'] = True
         to_csv.append(rec)
 
-    attacks_evaluation_csv_fpath = os.path.join(FLAGS.result_folder, "%s_%s_attacks_evaluation.csv" % (FLAGS.dataset_name, FLAGS.model_name))
+    
+    attacks_evaluation_csv_fpath = os.path.join(FLAGS.result_folder, "%s_%s_attacks_evaluation_%s.csv" % (FLAGS.dataset_name, FLAGS.model_name, attack_string_hash))
     if not os.path.isfile(attacks_evaluation_csv_fpath):
-        fieldnames = ['dataset_name', 'model_name', 'attack_string', 'success_rate', 'mean_confidence', 'mean_l2_dist', 'mean_li_dist', 'mean_l0_dist_value', 'mean_l0_dist_pixel', 'duration_per_sample']
+        fieldnames = ['dataset_name', 'model_name', 'attack_string', 'duration_per_sample', 'discretization', 'success_rate', 'mean_confidence', 'mean_l2_dist', 'mean_li_dist', 'mean_l0_dist_value', 'mean_l0_dist_pixel']
         write_to_csv(to_csv, attacks_evaluation_csv_fpath, fieldnames)
 
     if FLAGS.visualize is True:
