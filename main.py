@@ -19,16 +19,15 @@ from tensorflow.python.platform import flags
 FLAGS = flags.FLAGS
 
 # Arguments for task scheduling
-flags.DEFINE_string('dataset_name', 'MNIST', 'dataset name.')
-# flags.DEFINE_string('model_name', 'cleverhans', '')
-flags.DEFINE_string('model_name', 'carlini', '')
-flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000;CarliniL2?targeted=next&batch_size=10&max_iterations=1000&confidence=2", '')
+flags.DEFINE_string('dataset_name', 'MNIST', 'Supported: MNIST, CIFAR-10, ImageNet.')
+flags.DEFINE_integer('nb_examples', 100, 'The number of examples selected for attacks.')
+flags.DEFINE_boolean('test_mode', False, 'Only select one sample for each class.')
+flags.DEFINE_string('model_name', 'carlini', 'Supported: carlini for MNIST and CIFAR-10; cleverhans and cleverhans_adv_trained for MNIST; resnet50 for ImageNet.')
+flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000;CarliniL2?targeted=next&batch_size=10&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
 # flags.DEFINE_string('attacks', "CarliniL2?targeted=next&batch_size=100&max_iterations=1000", '')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples as image or not.')
-flags.DEFINE_string('defense', 'feature_squeezing', '')
-flags.DEFINE_integer('nb_examples', 100, '')
-flags.DEFINE_string('result_folder', "./results", '')
-flags.DEFINE_boolean('test_mode', False, '')
+flags.DEFINE_string('defense', 'feature_squeezing', 'Supported: feature_squeezing (robustness&detection).')
+flags.DEFINE_string('result_folder', "./results", 'The output folder for results.')
 # flags.DEFINE_string('', '', '')
 
 
