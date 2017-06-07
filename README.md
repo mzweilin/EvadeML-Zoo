@@ -19,7 +19,7 @@ usage: main.py [-h] [--dataset_name DATASET_NAME] [--nb_examples NB_EXAMPLES]
                [--test_mode [TEST_MODE]] [--notest_mode]
                [--model_name MODEL_NAME] [--attacks ATTACKS]
                [--visualize [VISUALIZE]] [--novisualize] [--defense DEFENSE]
-               [--result_folder RESULT_FOLDER]
+               [--detection DETECTION] [--result_folder RESULT_FOLDER]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -37,11 +37,15 @@ optional arguments:
   --attacks ATTACKS     Attack name and parameters in URL style, separated by
                         semicolon.
   --visualize [VISUALIZE]
-                        Output the image examples as image or not.
+                        Output the image examples for each attack, enabled by
+                        default.
   --novisualize
-  --defense DEFENSE     Supported: feature_squeezing (robustness&detection).
+  --defense DEFENSE     Supported: feature_squeezing.
+  --detection DETECTION
+                        Supported: feature_squeezing.
   --result_folder RESULT_FOLDER
                         The output folder for results.
+
 ```
 
 ### Example.

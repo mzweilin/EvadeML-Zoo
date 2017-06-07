@@ -16,48 +16,58 @@ def get_tpr_fpr(true_labels, pred, threshold):
     return TP/np.sum(true_labels), FP/np.sum(1-true_labels)
 
 
-def get_roc_data_val(l1_dist, nb_samples = 1000, nb_cols=2):
-    x_train = np.hstack( [  l1_dist[:nb_samples/2,i] for i in range(nb_cols)])
-    y_train = np.hstack([np.zeros(nb_samples/2), np.ones(nb_samples/2*(nb_cols-1))])
+class FeatureSqueezingDetector:
+    def __init__(self, predict_func, squeezer_name):
+        self.classifier = predict_func
 
-    x_val = np.hstack( [  l1_dist[nb_samples/2:,i] for i in range(nb_cols)])
-    y_val = y_train
+        if squeezer_name == 'binary_filter':
+            self.squeezer = lambda x: binary_filter_np(x)
+        elif squeezer_name == 'median_filter_2':
+            self.squeezer = lambda x: median_filter_np(x, 2)
 
+    def get_l1_dist(self, X):
+        pred_orig = self.classifier(X)
+        pred_squeezed = self.classifier(self.squeezer(X))
 
-def train_detector(x_train, y_train, x_val, y_val):
-    fpr, tpr, thresholds = roc_curve(y_train, x_train)
-    accuracy = [ sklearn.metrics.accuracy_score(y_train, x_train>threshold, normalize=True, sample_weight=None) for threshold in thresholds ]
-    roc_auc = auc(fpr, tpr)
+        l1_dist = np.sum(np.abs(pred_orig - pred_squeezed), axis=1)
+        return l1_dist
 
-    idx_best = np.argmax(accuracy)
-    threshold = thresholds[idx_best]
-    print ("Best training accuracy: %.4f, TPR(Recall): %.4f, FPR: %.4f @%.4f" % (accuracy[idx_best], tpr[idx_best], fpr[idx_best], thresholds[idx_best]))
-    print ("ROC_AUC: %.4f" % roc_auc)
+    def train(self, X, Y):
+        X_l1 = self.get_l1_dist(X)
 
-    accuracy_val = [ sklearn.metrics.accuracy_score(y_val, x_val>threshold, normalize=True, sample_weight=None) for threshold in thresholds ]
-    tpr_val, fpr_val = zip(*[ get_tpr_fpr(y_val, x_val, threshold)  for threshold in thresholds  ])
-    # roc_auc_val = auc(fpr_val, tpr_val)
-    print ("Validation accuracy: %.4f, TPR(Recall): %.4f, FPR: %.4f @%.4f" % (accuracy_val[idx_best], tpr_val[idx_best], fpr_val[idx_best], thresholds[idx_best]))
+        fpr, tpr, thresholds = roc_curve(Y, X_l1)
+        accuracy = [ sklearn.metrics.accuracy_score(Y, X_l1>threshold, normalize=True, sample_weight=None) for threshold in thresholds ]
+        roc_auc = auc(fpr, tpr)
 
-    fpr, tpr, thresholds = roc_curve(y_val, x_val)
-    roc_auc = auc(fpr, tpr)
-    print ("ROC_AUC_validated: %.4f" % roc_auc)
+        idx_best = np.argmax(accuracy)
+        threshold = thresholds[idx_best]
+        print ("Best training accuracy: %.4f, TPR(Recall): %.4f, FPR: %.4f @%.4f" % (accuracy[idx_best], tpr[idx_best], fpr[idx_best], thresholds[idx_best]))
+        print ("ROC_AUC: %.4f" % roc_auc)
 
-    return threshold, accuracy_val, fpr_val, tpr_val
+        self.thresholds = thresholds
+        self.threshold = threshold
+        self.idx_best = idx_best
 
-def train_a_adversarial_detector(model, X, Y):
-    squeeze = lambda x: median_filter_np(x, 2)
-    squeeze = lambda x: binary_filter_np(x)
-    pred_orig = model.predict(X)
-    pred_squeezed = model.predict(squeeze(X))
+    def test(self, X, Y):
+        idx_best = self.idx_best
+        thresholds = self.thresholds
+        threshold = thresholds[idx_best]
 
-    l1_dist = np.sum(np.abs(pred_orig - pred_squeezed), axis=1)
+        X_l1 = self.get_l1_dist(X)
 
-    train_ratio = 0.5
-    train_idx = random.sample(xrange(len(Y)), int(train_ratio*len(Y)))
-    val_idx = [ i for i in xrange(len(Y)) if i not in train_idx]
+        accuracy_val = [ sklearn.metrics.accuracy_score(Y, X_l1>threshold, normalize=True, sample_weight=None) for threshold in thresholds ]
+        tpr_val, fpr_val = zip(*[ get_tpr_fpr(Y, X_l1, threshold)  for threshold in thresholds  ])
+        print ("Validation accuracy: %.4f, TPR(Recall): %.4f, FPR: %.4f @%.4f" % (accuracy_val[idx_best], tpr_val[idx_best], fpr_val[idx_best], thresholds[idx_best]))
 
-    x_train, y_train = l1_dist[train_idx], Y[train_idx]
-    x_val, y_val = l1_dist[val_idx], Y[val_idx]
+        fpr, tpr, thresholds = roc_curve(Y, X_l1)
+        roc_auc = auc(fpr, tpr)
+        print ("ROC_AUC_validated: %.4f" % roc_auc)
 
-    train_detector(x_train, y_train, x_val, y_val)
+        ret = {}
+        ret['threshold'] = threshold
+        ret['accuracy'] = accuracy_val[idx_best]
+        ret['fpr'] = fpr_val[idx_best]
+        ret['tpr'] = tpr_val[idx_best]
+        ret['roc_auc'] = roc_auc
+
+        return ret

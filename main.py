@@ -7,6 +7,7 @@ import os
 import pdb
 import pickle
 import time
+import random
 
 import keras
 import numpy as np
@@ -25,8 +26,9 @@ flags.DEFINE_boolean('test_mode', False, 'Only select one sample for each class.
 flags.DEFINE_string('model_name', 'carlini', 'Supported: carlini for MNIST and CIFAR-10; cleverhans and cleverhans_adv_trained for MNIST; resnet50 for ImageNet.')
 flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000;CarliniL2?targeted=next&batch_size=10&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
 # flags.DEFINE_string('attacks', "CarliniL2?targeted=next&batch_size=100&max_iterations=1000", '')
-flags.DEFINE_boolean('visualize', True, 'Output the image examples as image or not.')
-flags.DEFINE_string('defense', 'feature_squeezing', 'Supported: feature_squeezing (robustness&detection).')
+flags.DEFINE_boolean('visualize', True, 'Output the image examples for each attack, enabled by default.')
+flags.DEFINE_string('defense', 'feature_squeezing', 'Supported: feature_squeezing.')
+flags.DEFINE_string('detection', 'feature_squeezing', 'Supported: feature_squeezing.')
 flags.DEFINE_string('result_folder', "./results", 'The output folder for results.')
 # flags.DEFINE_string('', '', '')
 
@@ -206,21 +208,32 @@ def main(argv=None):
             print ("\n---Results are stored in ", csv_fpath, '\n')
 
 
-        """
-        Test the detection.
-        """
-        from defenses.feature_squeezing.detection import train_a_adversarial_detector
-
+    # 7. Detection experiment.
+    if FLAGS.detection is not None:
+        # 7.1 Prepare the dataset for detection.
         X_test_adv_all = np.vstack(X_test_adv_list)
         # Try to get a balanced dataset.
         X_test_leg = X_test_all[:min(len(X_test_adv_all), len(X_test_all))]
 
-        X_for_detection = np.vstack([X_test_leg, X_test_adv_all])
-        Y_for_detection = np.hstack([np.zeros(len(X_test_leg)), np.ones(len(X_test_adv_all))])
+        X_detect = np.vstack([X_test_leg, X_test_adv_all])
+        Y_detect = np.hstack([np.zeros(len(X_test_leg)), np.ones(len(X_test_adv_all))])
         print ("Detection dataset: %d legitimate examples, %d adversarial examples" % (len(X_test_leg), len(X_test_adv_all)))
-        train_a_adversarial_detector(model, X_for_detection, Y_for_detection)
 
-        print ("---Done")
+        train_ratio = 0.5
+        random.seed(1234)
+        train_idx = random.sample(xrange(len(Y_detect)), int(train_ratio*len(Y_detect)))
+        test_idx = [ i for i in xrange(len(Y_detect)) if i not in train_idx]
+
+        X_detect_train, Y_detect_train = X_detect[train_idx], Y_detect[train_idx]
+        X_detect_test, Y_detect_test = X_detect[test_idx], Y_detect[test_idx]
+
+        # 7.2 Enumerate all specified detection methods.
+        # Feature Squeezing as an example.
+        from defenses.feature_squeezing.detection import FeatureSqueezingDetector
+        detector = FeatureSqueezingDetector(predict_func = model.predict, squeezer_name = 'binary_filter')
+        detector.train(X_detect_train, Y_detect_train)
+        detection_performance = detector.test(X_detect_test, Y_detect_test)
+        print (detection_performance)
 
 if __name__ == '__main__':
     main()
