@@ -8,35 +8,44 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten, Lambda
 from keras.layers import MaxPooling2D, Conv2D
 
-def cleverhans_mnist_model(logits=True, scaling = True):
+def cleverhans_mnist_model(logits=False, input_range_type=1):
     input_shape = (28, 28, 1)
     nb_filters = 64
     nb_classes = 10
-    return cleverhans_model(input_shape, nb_filters, nb_classes, logits=logits, scaling=scaling)
+    return cleverhans_model(input_shape, nb_filters, nb_classes, logits=logits, input_range_type=input_range_type)
 
-def cleverhans_cifar10_model(logits=True, scaling = True):
+
+def cleverhans_cifar10_model(logits=False, input_range_type=1):
     input_shape = (32, 32, 3)
     nb_filters = 64
     nb_classes = 10
-    return cleverhans_model(input_shape, nb_filters, nb_classes, logits=logits, scaling=scaling)
+    return cleverhans_model(input_shape, nb_filters, nb_classes, logits=logits, input_range_type=input_range_type)
 
-def cleverhans_model(input_shape, nb_filters, nb_classes, logits=False, scaling=False):
+
+def cleverhans_model(input_shape, nb_filters, nb_classes, logits=False, input_range_type=1):
     """
     Defines a CNN model using Keras sequential model
-    :param logits: If set to False, returns a Keras model, otherwise will also
-                    return logits tensor
-    :param scaling: input [0,1] if False, else [-0.5, 0.5]
+    :params logits: return logits(input of softmax layer) if True; return softmax output otherwise.
+    :params input_range_type: the expected input range, {1: [0,1], 2:[-0.5, 0.5], 3:[-1, 1]...}
     :return:
     """
     model = Sequential()
 
-    if scaling is True:
-        # Convert from float [-0.5,0.5] to float [0,1]
-        layers = [Lambda(lambda x:x+0.5, input_shape=input_shape), Dropout(0.2)]
-    else:
-        layers = [Dropout(0.2, input_shape=input_shape)]
+    if input_range_type == 1:
+        # The input data range is [0, 1]. 
+        # Don't need to do scaling for cleverhans models, as it is the input range by default.
+        scaler = lambda x: x
+    elif input_range_type == 2:
+        # The input data range is [-0.5, 0.5]. Convert to [0,1] by adding 0.5 element-wise.
+        scaler = lambda x: x+0.5
+    elif input_range_type == 3:
+        # The input data range is [-1, 1]. Convert to [0,1] by x/2+0.5.
+        scaler = lambda x: x/2+0.5
 
-    layers += [conv_2d(nb_filters, (8, 8), (2, 2), "same"),
+    layers = [Lambda(scaler, input_shape=input_shape)]
+
+    layers += [Dropout(0.2),
+              conv_2d(nb_filters, (8, 8), (2, 2), "same"),
               Activation('relu'),
               conv_2d((nb_filters * 2), (6, 6), (2, 2), "valid"),
               Activation('relu'),

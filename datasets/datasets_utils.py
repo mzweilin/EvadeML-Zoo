@@ -1,4 +1,5 @@
 import numpy as np
+import functools
 import pdb
 
 def get_first_example_id_each_class(Y_test):
@@ -44,6 +45,7 @@ def calculate_accuracy(Y_pred, Y_label):
     Y_label_class = np.argmax(Y_label, axis = 1)
 
     accuracy = np.sum(Y_pred_class == Y_label_class) / float(len(Y_label))
+    # pdb.set_trace()
     return accuracy
 
 
@@ -57,7 +59,7 @@ def calculate_mean_distance(X1, X2):
     mean_l0_dist_value = mean_l0_dist_value / (img_size*nb_channels)
 
     diff_channel_list = np.split(X1-X2 != 0, nb_channels, axis=3)
-    l0_channel_dependent_list = np.sum(reduce(lambda x,y: x|y, diff_channel_list), axis = (1,2,3))
+    l0_channel_dependent_list = np.sum(functools.reduce(lambda x,y: x|y, diff_channel_list), axis = (1,2,3))
     mean_l0_dist_pixel = np.mean(l0_channel_dependent_list) / img_size
 
     return mean_l2_dist, mean_li_dist, mean_l0_dist_value, mean_l0_dist_pixel
@@ -67,6 +69,7 @@ def evaluate_adversarial_examples(X_test, X_test_adv, Y_test_target, targeted, m
     Y_test_adv_pred = model_predict(X_test_adv)
 
     success_rate = calculate_accuracy(Y_test_adv_pred, Y_test_target)
+    # TODO: calculate the mean confidence of the successful adversarial examples.
     mean_conf = calculate_mean_confidence(Y_test_adv_pred, Y_test_target)
     if targeted is False:
         success_rate = 1 - success_rate

@@ -9,9 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import load_externals
 from cleverhans.utils_tf import model_loss, batch_eval
 
-# from tensorflow.python.platform import flags
-# FLAGS = flags.FLAGS
-
+import warnings
 
 def override_params(default, update):
     for key in default:
@@ -25,13 +23,20 @@ def override_params(default, update):
                 elif val == 'l1':
                     val = 1
                 else:
-                    raise ("Unsuporrted ord [%s]" % val)
+                    raise ValueError("Unsuporrted ord: %s" % val)
             default[key] = val
+            del update[key]
+
+    if len(update) > 0:
+        warnings.warn("Ignored arguments: %s" % update.keys())
     return default
 
 
 from cleverhans.attacks import FastGradientMethod
-def generate_fgsm_examples(sess, model, x, X, batch_size, attack_params):
+def generate_fgsm_examples(sess, model, x, y, X, Y, attack_params, verbose):
+    """
+    Untargeted attack. Y is not needed.
+    """
     fgsm = FastGradientMethod(model, back='tf', sess=sess)
     fgsm_params = {'eps': 0.1, 'ord': np.inf, 'y': None, 'clip_min': 0, 'clip_max': 1}
     fgsm_params = override_params(fgsm_params, attack_params)
@@ -41,7 +46,10 @@ def generate_fgsm_examples(sess, model, x, X, batch_size, attack_params):
 
 
 from cleverhans.attacks import BasicIterativeMethod
-def generate_bim_examples(sess, model, x, y, X, Y, attack_params):
+def generate_bim_examples(sess, model, x, y, X, Y, attack_params, verbose):
+    """
+    Untargeted attack. Y is not needed.
+    """
     bim = BasicIterativeMethod(model, back='tf', sess=sess)
     bim_params = {'eps': 0.1, 'eps_iter':0.05, 'nb_iter':10, 'y':y,
                      'ord':np.inf, 'clip_min':0, 'clip_max':1 }
@@ -52,8 +60,10 @@ def generate_bim_examples(sess, model, x, y, X, Y, attack_params):
 
 
 from cleverhans.attacks import SaliencyMapMethod
-def generate_jsma_examples(sess, model, x, y, X, Y, attack_params):
-    targeted = attack_params['targeted']
+def generate_jsma_examples(sess, model, x, y, X, Y, attack_params, verbose):
+    """
+    Targeted attack, with target classes in Y.
+    """
     Y_target = Y
 
     nb_classes = Y.shape[1]
@@ -63,6 +73,7 @@ def generate_jsma_examples(sess, model, x, y, X, Y, attack_params):
                    'nb_classes': nb_classes, 'clip_min': 0.,
                    'clip_max': 1., 'targets': y,
                    'y_val': None}
+    jsma_params = override_params(jsma_params, attack_params)
 
     adv_x_list = []
 
@@ -78,6 +89,4 @@ def generate_jsma_examples(sess, model, x, y, X, Y, attack_params):
             adv_x_list.append(adv_x)
 
     return np.vstack(adv_x_list)
-
-
 

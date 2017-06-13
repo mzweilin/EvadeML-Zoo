@@ -25,13 +25,13 @@ def get_next_class(Y_test):
     return np.eye(num_classes)[Y_test_labels]
 
 # TODO: replace pickle with .h5
-def maybe_generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, use_cache = False):
+def maybe_generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, use_cache=False, verbose=True):
     x_adv_fpath = use_cache
     if use_cache and os.path.isfile(x_adv_fpath):
         X_adv, duration = pickle.load(open(x_adv_fpath, "rb"))
     else:
         time_start = time.time()
-        X_adv = generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params)
+        X_adv = generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, verbose)
         duration = time.time() - time_start
 
         if use_cache:
@@ -59,21 +59,23 @@ def parse_attack_string(attack_string):
             attack_params[k] = float(v)
     return attack_name, attack_params
 
-def generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params):
-    batch_size = 100
+def generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, verbose):
     if attack_name == 'fgsm':
-        X_adv = generate_fgsm_examples(sess, model, x, X, batch_size, attack_params)
+        generate_adv_examples_func = generate_fgsm_examples
     elif attack_name == 'jsma':
-        X_adv = generate_jsma_examples(sess, model, x, y, X, Y, attack_params)
+        generate_adv_examples_func = generate_jsma_examples
     elif attack_name == 'bim':
-        X_adv = generate_bim_examples(sess, model, x, y, X, Y, attack_params)
+        generate_adv_examples_func = generate_bim_examples
     elif attack_name == 'carlinil2':
-        X_adv = generate_carlini_l2_examples(sess, model, x, y, X, Y, attack_params)
+        generate_adv_examples_func = generate_carlini_l2_examples
     elif attack_name == 'carlinili':
-        X_adv = generate_carlini_li_examples(sess, model, x, y, X, Y, attack_params)
+        generate_adv_examples_func = generate_carlini_li_examples
     elif attack_name == 'carlinil0':
-        X_adv = generate_carlini_l0_examples(sess, model, x, y, X, Y, attack_params)
-        
+        generate_adv_examples_func = generate_carlini_l0_examples
+    else:
+        raise NotImplementedError("Unsuported attack [%s]." % attack_name)
+
+    X_adv = generate_adv_examples_func(sess, model, x, y, X, Y, attack_params, verbose)
 
     return X_adv
 

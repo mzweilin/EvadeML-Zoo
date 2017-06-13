@@ -26,7 +26,7 @@ optional arguments:
   --dataset_name DATASET_NAME
                         Supported: MNIST, CIFAR-10, ImageNet.
   --nb_examples NB_EXAMPLES
-                        The number of examples selected for attacks.
+                        The number of examples selected for attacks. Invalid in test mode.
   --test_mode [TEST_MODE]
                         Only select one sample for each class.
   --notest_mode
@@ -50,5 +50,5 @@ optional arguments:
 
 ### Example.
 ```bash
-python main.py --dataset_name MNIST --model_name carlini --nb_examples 100 --attacks "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=100&max_iterations=1000;CarliniL2?targeted=next&batch_size=100&max_iterations=1000&confidence=2;CarliniLi?targeted=next;CarliniL0?targeted=next;" --defense feature_squeezing
+python main.py --dataset_name MNIST --model_name carlini --test_mode --attacks "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=100&max_iterations=1000;CarliniL2?targeted=next&batch_size=100&max_iterations=1000&confidence=2;CarliniLi?targeted=next;CarliniL0?targeted=next;" --defense feature_squeezing --detection feature_squeezing
 ```

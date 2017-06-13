@@ -7,7 +7,8 @@ import random
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from squeeze import median_filter_np, binary_filter_np
+from .squeeze import median_filter_np, binary_filter_np
+
 
 def get_tpr_fpr(true_labels, pred, threshold):
     pred_labels = pred > threshold
@@ -22,7 +23,7 @@ class FeatureSqueezingDetector:
 
         if squeezer_name == 'binary_filter':
             self.squeezer = lambda x: binary_filter_np(x)
-        elif squeezer_name == 'median_filter_2':
+        elif squeezer_name == 'median_smoothing_2':
             self.squeezer = lambda x: median_filter_np(x, 2)
 
     def get_l1_dist(self, X):

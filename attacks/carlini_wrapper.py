@@ -40,7 +40,7 @@ class CarliniModelWrapper:
 
 
 from nn_robust_attacks.l2_attack import CarliniL2
-def generate_carlini_l2_examples(sess, model_logits, x, y, X, Y, attack_params):
+def generate_carlini_l2_examples(sess, model_logits, x, y, X, Y, attack_params, verbose):
     image_size, num_channels = X.shape[1], X.shape[3]
     num_labels = Y.shape[1]
 
@@ -49,20 +49,27 @@ def generate_carlini_l2_examples(sess, model_logits, x, y, X, Y, attack_params):
     accepted_params = ['batch_size', 'confidence', 'targeted', 'learning_rate', 'binary_search_steps', 'max_iterations', 'abort_early', 'initial_const']
     for k in attack_params:
         if k not in accepted_params:
-            raise ("Unsuporrted params in Carlini L2: %s" % k)
+            raise NotImplementedError("Unsuporrted params in Carlini L2: %s" % k)
 
     # assert batch_size <= len(X)
     if 'batch_size' in attack_params and attack_params['batch_size'] > len(X):
         attack_params['batch_size'] = len(X)
 
     attack = CarliniL2(sess, model_wrapper, **attack_params)
-    X_scaled = X - 0.5
-    X_adv = attack.attack(X_scaled, Y)
-    return X_adv + 0.5
+
+    if not verbose:
+        disablePrint()
+    # The input range is [0, 1], convert to [-0.5, 0.5] by subtracting 0.5.
+    # The return range is [-0.5, 0.5]. Convert back to [0,1] by adding 0.5.
+    X_adv = attack.attack(X - 0.5, Y) + 0.5
+    if not verbose:
+        enablePrint()
+
+    return X_adv
 
 
 from nn_robust_attacks.li_attack import CarliniLi
-def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params):
+def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params, verbose):
     image_size, num_channels = X.shape[1], X.shape[3]
     num_labels = Y.shape[1]
 
@@ -77,16 +84,11 @@ def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params):
     accepted_params = ['targeted', 'learning_rate', 'max_iterations', 'abort_early', 'initial_const', 'largest_const', 'reduce_const', 'decrease_factor', 'const_factor']
     for k in attack_params:
         if k not in accepted_params:
-            raise ("Unsuporrted params in Carlini Li: %s" % k)
+            raise NotImplementedError("Unsuporrted params in Carlini Li: %s" % k)
 
     attack = CarliniLi(sess, model_wrapper, **attack_params)
     
     X_adv_list = []
-    # for i in np.arange(0, len(X), batch_size):
-    #     X_sub = X[i:min(i+batch_size, len(X)),:]
-    #     X_scaled = X_sub - 0.5
-    #     X_adv_sub = attack.attack(X_scaled, Y)
-    #     X_adv_list.append(X_adv_sub)
 
     with click.progressbar(range(0, len(X)), file=sys.stderr, show_pos=True, 
                            width=40, bar_template='  [%(bar)s] Carlini Li Attacking %(info)s', 
@@ -94,18 +96,19 @@ def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params):
         for i in bar:
             if i % batch_size == 0:
                 X_sub = X[i:min(i+batch_size, len(X)),:]
-                X_scaled = X_sub - 0.5
-                disablePrint()
-                X_adv_sub = attack.attack(X_scaled, Y)
-                enablePrint()
+                if not verbose:
+                    disablePrint()
+                X_adv_sub = attack.attack(X_sub - 0.5, Y) + 0.5
+                if not verbose:
+                    enablePrint()
                 X_adv_list.append(X_adv_sub)
 
     X_adv = np.vstack(X_adv_list)
-    return X_adv + 0.5
+    return X_adv
 
 
 from nn_robust_attacks.l0_attack import CarliniL0
-def generate_carlini_l0_examples(sess, model_logits, x, y, X, Y, attack_params):
+def generate_carlini_l0_examples(sess, model_logits, x, y, X, Y, attack_params, verbose):
     image_size, num_channels = X.shape[1], X.shape[3]
     num_labels = Y.shape[1]
 
@@ -120,16 +123,11 @@ def generate_carlini_l0_examples(sess, model_logits, x, y, X, Y, attack_params):
     accepted_params = ['targeted', 'learning_rate', 'max_iterations', 'abort_early', 'initial_const', 'largest_const', 'reduce_const', 'decrease_factor', 'const_factor', 'independent_channels']
     for k in attack_params:
         if k not in accepted_params:
-            raise ("Unsuporrted params in Carlini L0: %s" % k)
+            raise NotImplementedError("Unsuporrted params in Carlini L0: %s" % k)
 
     attack = CarliniL0(sess, model_wrapper, **attack_params)
 
     X_adv_list = []
-    # for i in np.arange(0, len(X), batch_size):
-    #     X_sub = X[i:min(i+batch_size, len(X)), :]
-    #     X_scaled = X_sub - 0.5
-    #     X_adv_sub = attack.attack(X_scaled, Y)
-    #     X_adv_list.append(X_adv_sub)
 
     with click.progressbar(range(0, len(X)), file=sys.stderr, show_pos=True, 
                            width=40, bar_template='  [%(bar)s] Carlini L0 Attacking %(info)s', 
@@ -137,11 +135,12 @@ def generate_carlini_l0_examples(sess, model_logits, x, y, X, Y, attack_params):
         for i in bar:
             if i % batch_size == 0:
                 X_sub = X[i:min(i+batch_size, len(X)),:]
-                X_scaled = X_sub - 0.5
-                disablePrint()
-                X_adv_sub = attack.attack(X_scaled, Y)
-                enablePrint()
+                if not verbose:
+                    disablePrint()
+                X_adv_sub = attack.attack(X_sub - 0.5, Y) + 0.5
+                if not verbose:
+                    enablePrint()
                 X_adv_list.append(X_adv_sub)
 
     X_adv = np.vstack(X_adv_list)
-    return X_adv + 0.5
+    return X_adv
