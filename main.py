@@ -146,8 +146,9 @@ def main(argv=None):
 
     # TODO: Other ways to select the target class: least likely?
     # Generate i + 1 (mod 10) as the target classes.
-    from attacks import get_next_class
+    from attacks import get_next_class, get_least_likely_class
     Y_test_target_next = get_next_class(Y_test)
+    Y_test_target_ll = get_least_likely_class(Y_pred)
 
     X_test_adv_list = []
 
@@ -167,7 +168,10 @@ def main(argv=None):
 
         if 'targeted' in attack_params:
             targeted = attack_params['targeted']
-            Y_test_target = Y_test_target_next
+            if targeted == 'next':
+                Y_test_target = Y_test_target_next
+            elif targeted == 'll':
+                Y_test_target = Y_test_target_ll
         else:
             targeted = False
             attack_params['targeted'] = False

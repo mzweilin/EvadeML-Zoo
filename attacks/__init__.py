@@ -24,6 +24,12 @@ def get_next_class(Y_test):
     Y_test_labels = (Y_test_labels + 1) % num_classes
     return np.eye(num_classes)[Y_test_labels]
 
+def get_least_likely_class(Y_pred):
+    num_classes = Y_pred.shape[1]
+    Y_target_labels = np.argmin(Y_pred, axis=1)
+    return np.eye(num_classes)[Y_target_labels]
+
+
 # TODO: replace pickle with .h5 for Python 2/3 compatibility issue.
 def maybe_generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, use_cache=False, verbose=True, attack_log_fpath=None):
     x_adv_fpath = use_cache
