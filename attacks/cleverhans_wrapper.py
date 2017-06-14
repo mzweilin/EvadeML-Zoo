@@ -33,7 +33,7 @@ def override_params(default, update):
 
 
 from cleverhans.attacks import FastGradientMethod
-def generate_fgsm_examples(sess, model, x, y, X, Y, attack_params, verbose):
+def generate_fgsm_examples(sess, model, x, y, X, Y, attack_params, verbose, attack_log_fpath):
     """
     Untargeted attack. Y is not needed.
     """
@@ -46,7 +46,7 @@ def generate_fgsm_examples(sess, model, x, y, X, Y, attack_params, verbose):
 
 
 from cleverhans.attacks import BasicIterativeMethod
-def generate_bim_examples(sess, model, x, y, X, Y, attack_params, verbose):
+def generate_bim_examples(sess, model, x, y, X, Y, attack_params, verbose, attack_log_fpath):
     """
     Untargeted attack. Y is not needed.
     """
@@ -60,7 +60,7 @@ def generate_bim_examples(sess, model, x, y, X, Y, attack_params, verbose):
 
 
 from cleverhans.attacks import SaliencyMapMethod
-def generate_jsma_examples(sess, model, x, y, X, Y, attack_params, verbose):
+def generate_jsma_examples(sess, model, x, y, X, Y, attack_params, verbose, attack_log_fpath):
     """
     Targeted attack, with target classes in Y.
     """

@@ -7,14 +7,18 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import load_externals
 from nn_robust_attacks import l2_attack#, li_attack, l0_attack
 
-def disablePrint():
+def disablePrint(log_fpath=None):
     sys.stdout.flush()
-    sys.stdout = open(os.devnull, 'w')
+    if log_fpath is None:
+        log_fpath = os.devnull
+    sys.stdout = open(log_fpath, 'w')
 
 
 def enablePrint():
-    sys.stdout = sys.__stdout__
     sys.stdout.flush()
+    log_f = sys.stdout
+    sys.stdout = sys.__stdout__
+    log_f.close()
 
 
 class CarliniModelWrapper:
@@ -40,7 +44,7 @@ class CarliniModelWrapper:
 
 
 from nn_robust_attacks.l2_attack import CarliniL2
-def generate_carlini_l2_examples(sess, model_logits, x, y, X, Y, attack_params, verbose):
+def generate_carlini_l2_examples(sess, model_logits, x, y, X, Y, attack_params, verbose, attack_log_fpath):
     image_size, num_channels = X.shape[1], X.shape[3]
     num_labels = Y.shape[1]
 
@@ -58,7 +62,7 @@ def generate_carlini_l2_examples(sess, model_logits, x, y, X, Y, attack_params, 
     attack = CarliniL2(sess, model_wrapper, **attack_params)
 
     if not verbose:
-        disablePrint()
+        disablePrint(attack_log_fpath)
     # The input range is [0, 1], convert to [-0.5, 0.5] by subtracting 0.5.
     # The return range is [-0.5, 0.5]. Convert back to [0,1] by adding 0.5.
     X_adv = attack.attack(X - 0.5, Y) + 0.5
@@ -69,7 +73,7 @@ def generate_carlini_l2_examples(sess, model_logits, x, y, X, Y, attack_params, 
 
 
 from nn_robust_attacks.li_attack import CarliniLi
-def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params, verbose):
+def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params, verbose, attack_log_fpath):
     image_size, num_channels = X.shape[1], X.shape[3]
     num_labels = Y.shape[1]
 
@@ -97,7 +101,7 @@ def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params, 
             if i % batch_size == 0:
                 X_sub = X[i:min(i+batch_size, len(X)),:]
                 if not verbose:
-                    disablePrint()
+                    disablePrint(attack_log_fpath)
                 X_adv_sub = attack.attack(X_sub - 0.5, Y) + 0.5
                 if not verbose:
                     enablePrint()
@@ -108,7 +112,7 @@ def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params, 
 
 
 from nn_robust_attacks.l0_attack import CarliniL0
-def generate_carlini_l0_examples(sess, model_logits, x, y, X, Y, attack_params, verbose):
+def generate_carlini_l0_examples(sess, model_logits, x, y, X, Y, attack_params, verbose, attack_log_fpath):
     image_size, num_channels = X.shape[1], X.shape[3]
     num_labels = Y.shape[1]
 
@@ -136,7 +140,7 @@ def generate_carlini_l0_examples(sess, model_logits, x, y, X, Y, attack_params, 
             if i % batch_size == 0:
                 X_sub = X[i:min(i+batch_size, len(X)),:]
                 if not verbose:
-                    disablePrint()
+                    disablePrint(attack_log_fpath)
                 X_adv_sub = attack.attack(X_sub - 0.5, Y) + 0.5
                 if not verbose:
                     enablePrint()

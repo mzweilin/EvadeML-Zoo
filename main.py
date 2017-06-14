@@ -28,7 +28,7 @@ flags.DEFINE_boolean('visualize', True, 'Output the image examples for each atta
 flags.DEFINE_string('defense', 'feature_squeezing1', 'Supported: feature_squeezing.')
 flags.DEFINE_string('detection', 'feature_squeezing1', 'Supported: feature_squeezing.')
 flags.DEFINE_string('result_folder', "./results", 'The output folder for results.')
-flags.DEFINE_boolean('verbose', False, 'Stdout level.')
+flags.DEFINE_boolean('verbose', False, 'Stdout level. The hidden content will be saved to log files anyway.')
 
 
 def load_tf_session():
@@ -156,10 +156,13 @@ def main(argv=None):
     to_csv = []
 
     X_adv_cache_folder = os.path.join(FLAGS.result_folder, 'adv_examples')
-    if not os.path.isdir(X_adv_cache_folder):
-        os.makedirs(X_adv_cache_folder)
+    adv_log_folder = os.path.join(FLAGS.result_folder, 'adv_logs')
+    for folder in [X_adv_cache_folder, adv_log_folder]:
+        if not os.path.isdir(folder):
+            os.makedirs(folder)
 
     for attack_string in attack_string_list:
+        attack_log_fpath = os.path.join(adv_log_folder, "%s_%s.log" % (task_id, attack_string))
         attack_name, attack_params = parse_attack_string(attack_string)
         print ( "\nRunning attack: %s %s" % (attack_name, attack_params))
 
@@ -180,7 +183,7 @@ def main(argv=None):
         x_adv_fname = "%s_%s.pickle" % (task_id, attack_string)
         x_adv_fpath = os.path.join(X_adv_cache_folder, x_adv_fname)
 
-        X_test_adv, duration = maybe_generate_adv_examples(sess, target_model, x, y, X_test, Y_test_target, attack_name, attack_params, use_cache = x_adv_fpath, verbose=FLAGS.verbose)
+        X_test_adv, duration = maybe_generate_adv_examples(sess, target_model, x, y, X_test, Y_test_target, attack_name, attack_params, use_cache = x_adv_fpath, verbose=FLAGS.verbose, attack_log_fpath=attack_log_fpath)
         X_test_adv_list.append(X_test_adv)
 
         dur_per_sample = duration / len(X_test_adv)
@@ -238,7 +241,7 @@ def main(argv=None):
         from defenses.feature_squeezing.robustness import calculate_squeezed_accuracy
 
         for attack_string, X_test_adv in zip(attack_string_list, X_test_adv_list):
-            csv_fpath = "%s_%d_%s_%s_robustness.csv" % (dataset.dataset_name, FLAGS.nb_examples, dataset.model_name, attack_string)
+            csv_fpath = "%s_%s_robustness.csv" % (task_id, attack_string)
             csv_fpath = os.path.join(FLAGS.result_folder, csv_fpath)
 
             print ("\n===Calculating the accuracy with feature squeezing...")

@@ -25,13 +25,13 @@ def get_next_class(Y_test):
     return np.eye(num_classes)[Y_test_labels]
 
 # TODO: replace pickle with .h5 for Python 2/3 compatibility issue.
-def maybe_generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, use_cache=False, verbose=True):
+def maybe_generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, use_cache=False, verbose=True, attack_log_fpath=None):
     x_adv_fpath = use_cache
     if use_cache and os.path.isfile(x_adv_fpath):
         X_adv, duration = pickle.load(open(x_adv_fpath, "rb"))
     else:
         time_start = time.time()
-        X_adv = generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, verbose)
+        X_adv = generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, verbose, attack_log_fpath)
         duration = time.time() - time_start
 
         if use_cache:
@@ -59,7 +59,7 @@ def parse_attack_string(attack_string):
             attack_params[k] = float(v)
     return attack_name, attack_params
 
-def generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, verbose):
+def generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, verbose, attack_log_fpath):
     if attack_name == 'fgsm':
         generate_adv_examples_func = generate_fgsm_examples
     elif attack_name == 'jsma':
@@ -75,7 +75,7 @@ def generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, v
     else:
         raise NotImplementedError("Unsuported attack [%s]." % attack_name)
 
-    X_adv = generate_adv_examples_func(sess, model, x, y, X, Y, attack_params, verbose)
+    X_adv = generate_adv_examples_func(sess, model, x, y, X, Y, attack_params, verbose, attack_log_fpath)
 
     return X_adv
 
