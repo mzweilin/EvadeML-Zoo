@@ -35,7 +35,7 @@ class FeatureSqueezingDetector:
         elif squeezer_name == 'median_smoothing_2':
             self.squeezer = lambda x: median_filter_np(x, 2)
 
-    def get_dist(self, X):
+    def get_distance(self, X):
         val_orig = self.eval_layer_output(X, self.layer_id)
         val_squeezed = self.eval_layer_output(self.squeezer(X), self.layer_id)
         return self.distance_func(val_orig, val_squeezed)
@@ -45,7 +45,7 @@ class FeatureSqueezingDetector:
         return layer_output.predict(X)
 
     def train(self, X, Y):
-        X_l1 = self.get_dist(X)
+        X_l1 = self.get_distance(X)
 
         fpr, tpr, thresholds = roc_curve(Y, X_l1)
         accuracy = [ sklearn.metrics.accuracy_score(Y, X_l1>threshold, normalize=True, sample_weight=None) for threshold in thresholds ]
@@ -65,7 +65,7 @@ class FeatureSqueezingDetector:
         thresholds = self.thresholds
         threshold = thresholds[idx_best]
 
-        X_l1 = self.get_dist(X)
+        X_l1 = self.get_distance(X)
 
         accuracy_val = [ sklearn.metrics.accuracy_score(Y, X_l1>threshold, normalize=True, sample_weight=None) for threshold in thresholds ]
         tpr_val, fpr_val = zip(*[ get_tpr_fpr(Y, X_l1, threshold)  for threshold in thresholds  ])
