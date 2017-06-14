@@ -24,7 +24,7 @@ def get_next_class(Y_test):
     Y_test_labels = (Y_test_labels + 1) % num_classes
     return np.eye(num_classes)[Y_test_labels]
 
-# TODO: replace pickle with .h5
+# TODO: replace pickle with .h5 for Python 2/3 compatibility issue.
 def maybe_generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, use_cache=False, verbose=True):
     x_adv_fpath = use_cache
     if use_cache and os.path.isfile(x_adv_fpath):

@@ -16,7 +16,6 @@ from tensorflow.python.platform import app
 from tensorflow.python.platform import flags
 
 
-
 FLAGS = flags.FLAGS
 
 # Arguments for task scheduling
@@ -25,15 +24,11 @@ flags.DEFINE_integer('nb_examples', 100, 'The number of examples selected for at
 flags.DEFINE_boolean('test_mode', False, 'Only select one sample for each class.')
 flags.DEFINE_string('model_name', 'carlini', 'Supported: carlini for MNIST and CIFAR-10; cleverhans and cleverhans_adv_trained for MNIST; resnet50 for ImageNet.')
 flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000;CarliniL2?targeted=next&batch_size=10&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
-# flags.DEFINE_string('attacks', "CarliniL2?targeted=next&batch_size=100&max_iterations=1000", '')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples for each attack, enabled by default.')
 flags.DEFINE_string('defense', 'feature_squeezing1', 'Supported: feature_squeezing.')
 flags.DEFINE_string('detection', 'feature_squeezing1', 'Supported: feature_squeezing.')
 flags.DEFINE_string('result_folder', "./results", 'The output folder for results.')
 flags.DEFINE_boolean('verbose', False, 'Stdout level.')
-# flags.DEFINE_string('', '', '')
-
-
 
 
 def load_tf_session():
@@ -130,7 +125,7 @@ def main(argv=None):
 
     task['test_set_selected_length'] = len(selected_idx)
     task['test_set_selected_idx_ranges'] = selected_example_idx_ranges
-    task['test_set_selected_idx_hash'] = hashlib.sha1(str(selected_idx)).hexdigest()
+    task['test_set_selected_idx_hash'] = hashlib.sha1(str(selected_idx).encode('utf-8')).hexdigest()
     task['accuracy_test_selected'] = accuracy_selected
     task['mean_confidence_test_selected'] = mean_conf_selected
 
