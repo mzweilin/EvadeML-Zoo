@@ -26,7 +26,7 @@ flags.DEFINE_string('model_name', 'carlini', 'Supported: carlini for MNIST and C
 flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000;CarliniL2?targeted=next&batch_size=10&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples for each attack, enabled by default.')
 flags.DEFINE_string('defense', 'feature_squeezing1', 'Supported: feature_squeezing.')
-flags.DEFINE_string('detection', 'feature_squeezing1', 'Supported: feature_squeezing.')
+flags.DEFINE_string('detection', 'feature_squeezing', 'Supported: feature_squeezing.')
 flags.DEFINE_string('result_folder', "./results", 'The output folder for results.')
 flags.DEFINE_boolean('verbose', False, 'Stdout level. The hidden content will be saved to log files anyway.')
 
@@ -78,7 +78,6 @@ def main(argv=None):
         # Carlini/Wagner's attack implementations require the input range [-0.5, 0.5].
         model_carlini = dataset.load_model_by_name(FLAGS.model_name, logits=True, input_range_type=2)
         model_carlini.compile(loss='categorical_crossentropy',optimizer='sgd', metrics=['acc'])
-
 
     # 3. Evaluate the trained model.
     Y_pred_all = model.predict(X_test_all)
@@ -216,9 +215,8 @@ def main(argv=None):
     attacks_evaluation_csv_fpath = os.path.join(FLAGS.result_folder, 
             "%s_attacks_%s_evaluation.csv" % \
             (task_id, attack_string_hash))
-    if not os.path.isfile(attacks_evaluation_csv_fpath):
-        fieldnames = ['dataset_name', 'model_name', 'attack_string', 'duration_per_sample', 'discretization', 'success_rate', 'mean_confidence', 'mean_l2_dist', 'mean_li_dist', 'mean_l0_dist_value', 'mean_l0_dist_pixel']
-        write_to_csv(to_csv, attacks_evaluation_csv_fpath, fieldnames)
+    fieldnames = ['dataset_name', 'model_name', 'attack_string', 'duration_per_sample', 'discretization', 'success_rate', 'mean_confidence', 'mean_l2_dist', 'mean_li_dist', 'mean_l0_dist_value', 'mean_l0_dist_pixel']
+    write_to_csv(to_csv, attacks_evaluation_csv_fpath, fieldnames)
 
     if FLAGS.visualize is True:
         from datasets.visualization import show_imgs_in_rows
@@ -250,14 +248,19 @@ def main(argv=None):
 
 
     # 7. Detection experiment. 
-    # TODO: All data should be discretized to uint8.
+    # All data should be discretized to uint8.
+    X_test_adv_discretized_list = [ reduce_precision_np(X_test_adv, 256) for X_test_adv in X_test_adv_list]
+    del X_test_adv_list
 
     if FLAGS.detection is not None:
         from utils.detection import get_detection_dataset, get_train_test_idx
-        # 7.1 Prepare the dataset for detection.
-        # 7.2 Enumerate all specified detection methods.
+
+        csv_fname = "%s_detection_%s.csv" % (task_id, FLAGS.detection)
+        detection_csv_fpath = os.path.join(FLAGS.result_folder, csv_fname)
+        to_csv = []
         for failed_adv_as_positve in [True, False]:
-            X_detect, Y_detect = get_detection_dataset(X_test_all, Y_test, X_test_adv_list, failed_adv_as_positve, predict_func=model.predict)
+            # 7.1 Prepare the dataset for detection.
+            X_detect, Y_detect = get_detection_dataset(X_test_all, Y_test, X_test_adv_discretized_list, failed_adv_as_positve, predict_func=model.predict)
 
             train_ratio = 0.5
             train_idx, test_idx = get_train_test_idx(train_ratio, len(Y_detect))
@@ -265,13 +268,21 @@ def main(argv=None):
             X_detect_train, Y_detect_train = X_detect[train_idx], Y_detect[train_idx]
             X_detect_test, Y_detect_test = X_detect[test_idx], Y_detect[test_idx]
 
+            # 7.2 Enumerate all specified detection methods.
             # Feature Squeezing as an example.
             from defenses.feature_squeezing.detection import FeatureSqueezingDetector
-            detector = FeatureSqueezingDetector(predict_func=model.predict, squeezer_name = 'median_smoothing_2')
-            detector.train(X_detect_train, Y_detect_train)
-            detection_performance = detector.test(X_detect_test, Y_detect_test)
-            print (detection_performance)
-            print ('')
+            for layer_id in range(len(model.layers)):
+                for distance_metric in ['l1', 'l2']:
+                    detector = FeatureSqueezingDetector(model=model, layer_id=layer_id, squeezer_name='median_smoothing_2', distance_metric_name=distance_metric)
+                    detector.train(X_detect_train, Y_detect_train)
+                    detect_perf_rec = detector.test(X_detect_test, Y_detect_test)
+                    detect_perf_rec['failed_adv_as_positve'] = failed_adv_as_positve
+                    detect_perf_rec['layer_id'] = layer_id
+                    detect_perf_rec['distance_metric'] = distance_metric
+                    to_csv.append(detect_perf_rec)
+
+        fieldnames = ['failed_adv_as_positve', 'layer_id', 'distance_metric', 'roc_auc', 'accuracy', 'tpr', 'fpr', 'threshold']
+        write_to_csv(to_csv, detection_csv_fpath, fieldnames)
 
 if __name__ == '__main__':
     main()
