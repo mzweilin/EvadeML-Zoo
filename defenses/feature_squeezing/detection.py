@@ -1,5 +1,9 @@
 import sklearn
 import numpy as np
+from scipy.stats import entropy
+import operator
+import functools
+
 from sklearn.metrics import roc_curve, auc
 from keras.models import Model
 
@@ -20,6 +24,28 @@ def get_tpr_fpr(true_labels, pred, threshold):
 l1_dist = lambda x1,x2: np.sum(np.abs(x1 - x2), axis=tuple(range(len(x1.shape))[1:]))
 l2_dist = lambda x1,x2: np.sum((x1-x2)**2, axis=tuple(range(len(x1.shape))[1:]))**.5
 
+# Note: KL-divergence is not symentric.
+def kl(x1, x2):
+    assert x1.shape == x2.shape
+
+    if len(x1.shape) > 2:
+        # Reshape to [#num_examples, ?]
+        batch_size = x1.shape[0]
+        num_dim = functools.reduce(operator.mul, x1.shape, 1)
+        x1_2d = x1.reshape((batch_size, num_dim/batch_size))
+        x2_2d = x2.reshape((batch_size, num_dim/batch_size))
+    else:
+        x1_2d, x2_2d = x1, x2
+
+    # Transpose to [?, #num_examples]
+    x1_2d_t = x1_2d.transpose()
+    x2_2d_t = x2_2d.transpose()
+
+    # pdb.set_trace()
+    e = entropy(x1_2d_t, x2_2d_t)
+    e[np.where(e==np.inf)] = 65535
+    return e
+
 class FeatureSqueezingDetector:
     def __init__(self, model, layer_id, squeezer_name, distance_metric_name):
         self.model = model
@@ -29,6 +55,10 @@ class FeatureSqueezingDetector:
             self.distance_func = l1_dist
         elif distance_metric_name == 'l2':
             self.distance_func = l2_dist
+        elif distance_metric_name == 'kl_f':
+            self.distance_func = lambda x1,x2: kl(x1, x2)
+        elif distance_metric_name == 'kl_b':
+            self.distance_func = lambda x1,x2: kl(x2, x1)
 
         if squeezer_name == 'binary_filter':
             self.squeezer = lambda x: binary_filter_np(x)

@@ -263,6 +263,8 @@ def main(argv=None):
         for failed_adv_as_positve in [True, False]:
             # 7.1 Prepare the dataset for detection.
             X_detect, Y_detect = get_detection_dataset(X_test_all, Y_test, X_test_adv_discretized_list, failed_adv_as_positve, predict_func=model.predict)
+            print ("Positive ratio in detection dataset %d/%d" % (np.sum(Y_detect), len(Y_detect)))
+
 
             train_ratio = 0.5
             train_idx, test_idx = get_train_test_idx(train_ratio, len(Y_detect))
@@ -270,11 +272,17 @@ def main(argv=None):
             X_detect_train, Y_detect_train = X_detect[train_idx], Y_detect[train_idx]
             X_detect_test, Y_detect_test = X_detect[test_idx], Y_detect[test_idx]
 
+            print ("Positive ratio in train %d/%d" % (np.sum(Y_detect_train), len(Y_detect_train)))
+            print ("Positive ratio in test %d/%d" % (np.sum(Y_detect_test), len(Y_detect_test)))
+
             # 7.2 Enumerate all specified detection methods.
             # Feature Squeezing as an example.
             from defenses.feature_squeezing.detection import FeatureSqueezingDetector
             for layer_id in range(len(model.layers)):
-                for distance_metric in ['l1', 'l2']:
+                if layer_id < len(model.layers)-1:
+                    continue
+                # for distance_metric in ['l1', 'l2']:
+                for distance_metric in ['kl_f', 'kl_b', 'l1', 'l2']:
                     detector = FeatureSqueezingDetector(model=model, layer_id=layer_id, squeezer_name='median_smoothing_2', distance_metric_name=distance_metric)
                     detector.train(X_detect_train, Y_detect_train)
                     detect_perf_rec = detector.test(X_detect_test, Y_detect_test)

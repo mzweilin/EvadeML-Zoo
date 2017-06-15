@@ -21,7 +21,7 @@ def get_detection_dataset(X_test_all, Y_test, X_test_adv_list, failed_adv_as_pos
 
         Y_detect = np.hstack([np.zeros(len(X_test_leg)), Y_test_adv_all_corrected])
 
-        print ("Labeled %d failed adversarial examples as %s" % (len(failed_adv_idx) ,'positive' if failed_adv_as_positve else 'negative'))
+        print ("Labeled %d failed adversarial examples as %s" % (len(failed_adv_idx[0]) ,'positive' if failed_adv_as_positve else 'negative'))
 
     return X_detect, Y_detect
 
