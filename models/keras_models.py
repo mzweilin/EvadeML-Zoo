@@ -14,7 +14,7 @@ def ResNet50(include_top=True, weights='imagenet',
              pooling=None,
              classes=1000,
              logits=False,
-             scaling=False):
+             input_range_type=1):
     """Instantiates the ResNet50 architecture.
 
     Optionally loads weights pre-trained
@@ -92,10 +92,10 @@ def ResNet50(include_top=True, weights='imagenet',
     else:
         bn_axis = 1
 
-    x = Lambda(lambda x: scaling_np(x, scaling))(img_input)
+    x = Lambda(lambda x: scaling_tf(x, input_range_type))(img_input)
+    x = ZeroPadding2D((3, 3))(x)
 
     # x = ZeroPadding2D((3, 3))(img_input)
-    x = ZeroPadding2D((3, 3))(x)
     x = Conv2D(64, (7, 7), strides=(2, 2), name='conv1')(x)
     x = BatchNormalization(axis=bn_axis, name='bn_conv1')(x)
     x = Activation('relu')(x)
@@ -181,12 +181,25 @@ def ResNet50(include_top=True, weights='imagenet',
 
 VGG_MEAN = [103.939, 116.779, 123.68]
 
-def scaling_tf(X):
+def scaling_tf(X, input_range_type):
     """
-    Convert from [0, 1] to [0, 255], then subtracting means, convert to BGR.
+    Convert to [0, 255], then subtracting means, convert to BGR.
     """
-    X_uint8 = tf.clip_by_value(tf.rint(X * 255), 0, 255)
-    red, green, blue = tf.split(X_uint8, 3, 3)
+
+    if input_range_type == 1:
+        # The input data range is [0, 1]. 
+        # Convert to [0, 255] by multiplying 255
+        X = X*255
+    elif input_range_type == 2:
+        # The input data range is [-0.5, 0.5]. Convert to [0,255] by adding 0.5 element-wise.
+        X = (X+0.5)*255
+    elif input_range_type == 3:
+        # The input data range is [-1, 1]. Convert to [0,1] by x/2+0.5.
+        X = (X/2+0.5)*255
+
+    # Caution: Resulting in zero gradients.
+    # X_uint8 = tf.clip_by_value(tf.rint(X), 0, 255)
+    red, green, blue = tf.split(X, 3, 3)
     X_bgr = tf.concat([
             blue - VGG_MEAN[2],
             green - VGG_MEAN[1],
@@ -195,7 +208,7 @@ def scaling_tf(X):
         ], 3)
     return X_bgr
 
-
+# It looks Keras-Lambda layer doesn't support numpy operations.
 from keras.applications.imagenet_utils import preprocess_input
 def scaling_np(X, scaling=False):
     if scaling:
@@ -205,7 +218,7 @@ def scaling_np(X, scaling=False):
     return X_bgr
 
 
-def keras_resnet50_imagenet_model(logits=False, scaling=False):
+def keras_resnet50_imagenet_model(logits=False, input_range_type=1):
     """
     Run the prediction network *without softmax*.
     """
@@ -213,7 +226,7 @@ def keras_resnet50_imagenet_model(logits=False, scaling=False):
     # if scaling:
     #     x = x + 0.5
     # x_bgr = scaling_tf(x)
-    model = ResNet50(include_top=True, weights='imagenet', input_tensor=None, input_shape=input_shape, pooling=None, classes=1000, logits=logits, scaling=scaling)
+    model = ResNet50(include_top=True, weights='imagenet', input_tensor=None, input_shape=input_shape, pooling=None, classes=1000, logits=logits, input_range_type=input_range_type)
     # predictions = model.outputs[0]
     # return predictions
     return model

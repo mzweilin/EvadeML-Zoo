@@ -87,9 +87,9 @@ def main(argv=None):
     print('Test accuracy on raw legitimate examples %.4f' % (accuracy_all))
     print('Mean confidence on ground truth classes %.4f' % (mean_conf_all))
 
-    if FLAGS.dataset_name == 'ImageNet':
-        # TODO: Configure attacks aganist ImageNet models.
-        return
+    # if FLAGS.dataset_name == 'ImageNet':
+    #     # TODO: Configure attacks aganist ImageNet models.
+    #     return
 
 
     # 4. Select some examples to attack.
@@ -144,8 +144,6 @@ def main(argv=None):
     attack_string_hash = hashlib.sha1(FLAGS.attacks.encode('utf-8')).hexdigest()[:5]
     sample_string_hash = task['test_set_selected_idx_hash'][:5]
 
-    # TODO: Other ways to select the target class: least likely?
-    # Generate i + 1 (mod 10) as the target classes.
     from attacks import get_next_class, get_least_likely_class
     Y_test_target_next = get_next_class(Y_test)
     Y_test_target_ll = get_least_likely_class(Y_pred)
