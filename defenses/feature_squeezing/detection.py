@@ -14,6 +14,35 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from .squeeze import median_filter_np, binary_filter_np
 
+def reshape_2d(x):
+    if len(x.shape) > 2:
+        # Reshape to [#num_examples, ?]
+        batch_size = x.shape[0]
+        num_dim = functools.reduce(operator.mul, x.shape, 1)
+        x = x.reshape((batch_size, num_dim/batch_size))
+    return x
+
+# Normalization.
+# Two approaches: 1. softmax; 2. unit-length vector (unit norm).
+
+# Source: ?
+def softmax(z):
+    assert len(z.shape) == 2
+    s = np.max(z, axis=1)
+    s = s[:, np.newaxis] # necessary step to do broadcasting
+    e_x = np.exp(z - s)
+    div = np.sum(e_x, axis=1)
+    div = div[:, np.newaxis] # dito
+    return e_x / div
+
+
+from sklearn.preprocessing import normalize
+def unit_norm(x):
+    """
+    x: a 2D array: (batch_size, vector_length)
+    """
+    return normalize(x, axis=1)
+
 
 def get_tpr_fpr(true_labels, pred, threshold):
     pred_labels = pred > threshold
@@ -24,22 +53,17 @@ def get_tpr_fpr(true_labels, pred, threshold):
 l1_dist = lambda x1,x2: np.sum(np.abs(x1 - x2), axis=tuple(range(len(x1.shape))[1:]))
 l2_dist = lambda x1,x2: np.sum((x1-x2)**2, axis=tuple(range(len(x1.shape))[1:]))**.5
 
+
+
 # Note: KL-divergence is not symentric.
+# Only for probability distribution.
 def kl(x1, x2):
     assert x1.shape == x2.shape
-
-    if len(x1.shape) > 2:
-        # Reshape to [#num_examples, ?]
-        batch_size = x1.shape[0]
-        num_dim = functools.reduce(operator.mul, x1.shape, 1)
-        x1_2d = x1.reshape((batch_size, num_dim/batch_size))
-        x2_2d = x2.reshape((batch_size, num_dim/batch_size))
-    else:
-        x1_2d, x2_2d = x1, x2
+    # x1_2d, x2_2d = reshape_2d(x1), reshape_2d(x2)
 
     # Transpose to [?, #num_examples]
-    x1_2d_t = x1_2d.transpose()
-    x2_2d_t = x2_2d.transpose()
+    x1_2d_t = x1.transpose()
+    x2_2d_t = x2.transpose()
 
     # pdb.set_trace()
     e = entropy(x1_2d_t, x2_2d_t)
@@ -47,7 +71,7 @@ def kl(x1, x2):
     return e
 
 class FeatureSqueezingDetector:
-    def __init__(self, model, layer_id, squeezer_name, distance_metric_name):
+    def __init__(self, model, layer_id, squeezer_name, distance_metric_name, normalizer):
         self.model = model
         self.layer_id = layer_id
 
@@ -60,6 +84,13 @@ class FeatureSqueezingDetector:
         elif distance_metric_name == 'kl_b':
             self.distance_func = lambda x1,x2: kl(x2, x1)
 
+        if normalizer == 'softmax':
+            self.normalize = softmax
+        elif normalizer == 'unit_norm':
+            self.normalize = unit_norm
+        elif normalizer == 'none':
+            self.normalize = lambda x:x
+
         if squeezer_name == 'binary_filter':
             self.squeezer = lambda x: binary_filter_np(x)
         elif squeezer_name == 'median_smoothing_2':
@@ -68,6 +99,8 @@ class FeatureSqueezingDetector:
     def get_distance(self, X):
         val_orig = self.eval_layer_output(X, self.layer_id)
         val_squeezed = self.eval_layer_output(self.squeezer(X), self.layer_id)
+
+        val_orig, val_squeezed = self.normalize(reshape_2d(val_orig)), self.normalize(reshape_2d(val_squeezed))
         return self.distance_func(val_orig, val_squeezed)
 
     def eval_layer_output(self, X, layer_id):

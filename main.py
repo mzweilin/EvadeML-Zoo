@@ -232,6 +232,17 @@ def main(argv=None):
         show_imgs_in_rows(rows, img_fpath)
         print ('\n===Adversarial image examples are saved in ', img_fpath)
 
+    # TODO: 5.5 Investigate how adversarial perturbation propagate throughout layers.
+
+    # Inputs
+    # from defenses.feature_squeezing.propagation import view_propagation
+
+    # for X_test_adv in X_test_adv_list:
+    #     view_propagation(X_test, X_test_adv, model)
+
+    # view_propagation(X_test, X_test+0.105, model)
+
+    # return
 
     # 6. Evaluate defense techniques.
     if FLAGS.defense == 'feature_squeezing':
@@ -257,7 +268,7 @@ def main(argv=None):
     if FLAGS.detection is not None:
         from utils.detection import get_detection_dataset, get_train_test_idx
 
-        csv_fname = "%s_detection_%s.csv" % (task_id, FLAGS.detection)
+        csv_fname = "%s_attacks_%s_detection_%s.csv" % (task_id, attack_string_hash, FLAGS.detection)
         detection_csv_fpath = os.path.join(FLAGS.result_folder, csv_fname)
         to_csv = []
         for failed_adv_as_positve in [True, False]:
@@ -279,19 +290,20 @@ def main(argv=None):
             # Feature Squeezing as an example.
             from defenses.feature_squeezing.detection import FeatureSqueezingDetector
             for layer_id in range(len(model.layers)):
-                if layer_id < len(model.layers)-1:
-                    continue
-                # for distance_metric in ['l1', 'l2']:
-                for distance_metric in ['kl_f', 'kl_b', 'l1', 'l2']:
-                    detector = FeatureSqueezingDetector(model=model, layer_id=layer_id, squeezer_name='median_smoothing_2', distance_metric_name=distance_metric)
-                    detector.train(X_detect_train, Y_detect_train)
-                    detect_perf_rec = detector.test(X_detect_test, Y_detect_test)
-                    detect_perf_rec['failed_adv_as_positve'] = failed_adv_as_positve
-                    detect_perf_rec['layer_id'] = layer_id
-                    detect_perf_rec['distance_metric'] = distance_metric
-                    to_csv.append(detect_perf_rec)
+                # if layer_id < len(model.layers)-3:
+                #     continue
+                for normalizer in ['softmax', 'unit_norm', 'none']:
+                    for distance_metric in ['kl_f', 'kl_b', 'l1', 'l2']:
+                        detector = FeatureSqueezingDetector(model=model, layer_id=layer_id, squeezer_name='median_smoothing_2', distance_metric_name=distance_metric, normalizer=normalizer)
+                        detector.train(X_detect_train, Y_detect_train)
+                        detect_perf_rec = detector.test(X_detect_test, Y_detect_test)
+                        detect_perf_rec['failed_adv_as_positve'] = failed_adv_as_positve
+                        detect_perf_rec['layer_id'] = layer_id
+                        detect_perf_rec['distance_metric'] = distance_metric
+                        detect_perf_rec['normalizer'] = normalizer
+                        to_csv.append(detect_perf_rec)
 
-        fieldnames = ['failed_adv_as_positve', 'layer_id', 'distance_metric', 'roc_auc', 'accuracy', 'tpr', 'fpr', 'threshold']
+        fieldnames = ['failed_adv_as_positve', 'layer_id', 'distance_metric', 'normalizer', 'roc_auc', 'accuracy', 'tpr', 'fpr', 'threshold']
         write_to_csv(to_csv, detection_csv_fpath, fieldnames)
 
 if __name__ == '__main__':
