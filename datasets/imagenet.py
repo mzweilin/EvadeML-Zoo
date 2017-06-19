@@ -7,6 +7,7 @@ from multiprocessing import Pool
 from keras.preprocessing import image
 
 from models.keras_models import keras_resnet50_imagenet_model
+from models.keras_models import keras_vgg19_imagenet_model
 
 pool = Pool()
 
@@ -62,6 +63,8 @@ class ImageNetDataset:
         """
         if model_name == 'resnet50':
             model = keras_resnet50_imagenet_model(logits=logits, input_range_type=input_range_type)
+        elif model_name == 'vgg19':
+            model = keras_vgg19_imagenet_model(logits=logits, input_range_type=input_range_type)
 
         return model
 
