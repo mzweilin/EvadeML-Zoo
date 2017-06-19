@@ -27,7 +27,7 @@ flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targ
 flags.DEFINE_boolean('visualize', True, 'Output the image examples for each attack, enabled by default.')
 flags.DEFINE_string('defense', 'feature_squeezing1', 'Supported: feature_squeezing.')
 flags.DEFINE_string('detection', 'feature_squeezing', 'Supported: feature_squeezing.')
-flags.DEFINE_string('result_folder', "./results", 'The output folder for results.')
+flags.DEFINE_string('result_folder', "results", 'The output folder for results.')
 flags.DEFINE_boolean('verbose', False, 'Stdout level. The hidden content will be saved to log files anyway.')
 
 
