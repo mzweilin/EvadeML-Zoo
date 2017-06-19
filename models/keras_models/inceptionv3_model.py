@@ -6,16 +6,39 @@ from utils import load_externals
 from inception_v3 import *
 
 from keras.applications.imagenet_utils import _obtain_input_shape
-from keras.layers import Dense, Dropout, Activation, Flatten, Lambda
+from keras.layers import  Lambda
 
 # from .keras_models import scaling_tf
+
+import pdb
+
+
+def scaling_tf(X, input_range_type):
+    """
+    Convert to [-1, 1].
+    """
+    if input_range_type == 1:
+        # The input data range is [0, 1]. Convert to [-1, 1] by
+        X = X - 0.5
+        X = X * 2.
+    elif input_range_type == 2:
+        # The input data range is [-0.5, 0.5]. Convert to [-1,1] by
+        X = X * 2.
+    elif input_range_type == 3:
+        # The input data range is [-1, 1].
+        X = X
+
+    return X
+
 
 def InceptionV3(include_top=True,
                 weights='imagenet',
                 input_tensor=None,
                 input_shape=None,
                 pooling=None,
-                classes=1000):
+                classes=1000,
+                logits=False,
+                input_range_type=1):
     """Instantiates the Inception v3 architecture.
     Optionally loads weights pre-trained
     on ImageNet. Note that when using TensorFlow,
@@ -88,7 +111,9 @@ def InceptionV3(include_top=True,
     else:
         channel_axis = 3
 
-    x = conv2d_bn(img_input, 32, 3, 3, strides=(2, 2), padding='valid')
+    # Scaling
+    x = Lambda(lambda x: scaling_tf(x, input_range_type))(img_input)
+    x = conv2d_bn(x, 32, 3, 3, strides=(2, 2), padding='valid')
     x = conv2d_bn(x, 32, 3, 3, padding='valid')
     x = conv2d_bn(x, 64, 3, 3)
     x = MaxPooling2D((3, 3), strides=(2, 2))(x)
@@ -264,7 +289,11 @@ def InceptionV3(include_top=True,
     if include_top:
         # Classification block
         x = GlobalAveragePooling2D(name='avg_pool')(x)
-        x = Dense(classes, activation='softmax', name='predictions')(x)
+        if logits:
+            activation_name = None
+        else:
+            activation_name = 'softmax'
+        x = Dense(classes, activation=activation_name, name='predictions')(x)
     else:
         if pooling == 'avg':
             x = GlobalAveragePooling2D()(x)

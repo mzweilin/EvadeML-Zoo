@@ -43,7 +43,7 @@ def load_tf_session():
 
 
 def main(argv=None):
-    # 1. Load a dataset.
+    # 0. Select a dataset.
     from datasets import MNISTDataset, CIFAR10Dataset, ImageNetDataset
     from datasets import get_correct_prediction_idx, evaluate_adversarial_examples, calculate_mean_confidence, calculate_accuracy
 
@@ -54,9 +54,12 @@ def main(argv=None):
     elif FLAGS.dataset_name == "ImageNet":
         dataset = ImageNetDataset()
 
+    # 1. Load a dataset.
     print ("\n===Loading %s data..." % FLAGS.dataset_name)
-    X_test_all, Y_test_all = dataset.get_test_dataset()
-
+    if FLAGS.model_name == 'inceptionv3':
+        X_test_all, Y_test_all = dataset.get_test_dataset(299)
+    else:
+        X_test_all, Y_test_all = dataset.get_test_dataset()
 
     # 2. Load a trained model.
     sess = load_tf_session()
@@ -79,6 +82,7 @@ def main(argv=None):
         model_carlini = dataset.load_model_by_name(FLAGS.model_name, logits=True, input_range_type=2)
         model_carlini.compile(loss='categorical_crossentropy',optimizer='sgd', metrics=['acc'])
 
+
     # 3. Evaluate the trained model.
     Y_pred_all = model.predict(X_test_all)
     mean_conf_all = calculate_mean_confidence(Y_pred_all, Y_test_all)
@@ -86,10 +90,6 @@ def main(argv=None):
     accuracy_all = calculate_accuracy(Y_pred_all, Y_test_all)
     print('Test accuracy on raw legitimate examples %.4f' % (accuracy_all))
     print('Mean confidence on ground truth classes %.4f' % (mean_conf_all))
-
-    # if FLAGS.dataset_name == 'ImageNet':
-    #     # TODO: Configure attacks aganist ImageNet models.
-    #     return
 
 
     # 4. Select some examples to attack.
@@ -115,6 +115,8 @@ def main(argv=None):
     print('Test accuracy on selected legitimate examples %.4f' % (accuracy_selected))
     print('Mean confidence on ground truth classes, selected %.4f\n' % (mean_conf_selected))
 
+    if FLAGS.dataset_name == 'ImageNet':
+        return
 
     task = {}
     task['dataset_name'] = FLAGS.dataset_name

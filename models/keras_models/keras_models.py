@@ -64,6 +64,18 @@ def keras_vgg19_imagenet_model(logits=False, input_range_type=1):
     model = VGG19(include_top=True, weights='imagenet', input_tensor=None, input_shape=input_shape, pooling=None, classes=1000, logits=logits, input_range_type=input_range_type)
     return model
 
+from .inceptionv3_model import InceptionV3
+def keras_inceptionv3_imagenet_model(logits=False, input_range_type=1):
+    input_shape = (299, 299, 3)
+    model = InceptionV3(include_top=True,
+                weights='imagenet',
+                input_tensor=None,
+                input_shape=input_shape,
+                pooling=None,
+                classes=1000,
+                logits=logits,
+                input_range_type=input_range_type)
+    return model
 
 if __name__ == '__main__':
     x = tf.placeholder(tf.float32, shape=(None, 224, 224, 3))
