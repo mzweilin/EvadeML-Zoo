@@ -7,18 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import load_externals
 from nn_robust_attacks import l2_attack#, li_attack, l0_attack
 
-def disablePrint(log_fpath=None):
-    sys.stdout.flush()
-    if log_fpath is None:
-        log_fpath = os.devnull
-    sys.stdout = open(log_fpath, 'w')
-
-
-def enablePrint():
-    sys.stdout.flush()
-    log_f = sys.stdout
-    sys.stdout = sys.__stdout__
-    log_f.close()
+from utils.output import disablePrint, enablePrint
 
 
 class CarliniModelWrapper:

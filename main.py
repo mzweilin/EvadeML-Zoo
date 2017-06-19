@@ -54,12 +54,18 @@ def main(argv=None):
     elif FLAGS.dataset_name == "ImageNet":
         dataset = ImageNetDataset()
 
+
     # 1. Load a dataset.
     print ("\n===Loading %s data..." % FLAGS.dataset_name)
-    if FLAGS.model_name == 'inceptionv3':
-        X_test_all, Y_test_all = dataset.get_test_dataset(299)
+    if FLAGS.dataset_name == 'ImageNet':
+        if FLAGS.model_name == 'inceptionv3':
+            img_size = 299
+        else:
+            img_size = 244
+        X_test_all, Y_test_all = dataset.get_test_data(img_size, 0, 100)
     else:
         X_test_all, Y_test_all = dataset.get_test_dataset()
+
 
     # 2. Load a trained model.
     sess = load_tf_session()
@@ -114,9 +120,6 @@ def main(argv=None):
     mean_conf_selected = calculate_mean_confidence(Y_pred, Y_test)
     print('Test accuracy on selected legitimate examples %.4f' % (accuracy_selected))
     print('Mean confidence on ground truth classes, selected %.4f\n' % (mean_conf_selected))
-
-    if FLAGS.dataset_name == 'ImageNet':
-        return
 
     task = {}
     task['dataset_name'] = FLAGS.dataset_name

@@ -1,5 +1,20 @@
 import csv
 import os
+import sys
+
+def disablePrint(log_fpath=None):
+    sys.stdout.flush()
+    if log_fpath is None:
+        log_fpath = os.devnull
+    sys.stdout = open(log_fpath, 'w')
+
+
+def enablePrint():
+    sys.stdout.flush()
+    log_f = sys.stdout
+    sys.stdout = sys.__stdout__
+    log_f.close()
+
 
 def write_to_csv(li, fpath, fieldnames):
     with open(fpath, 'w') as csvfile:

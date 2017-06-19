@@ -25,11 +25,15 @@ def scaling_tf(X, input_range_type):
     # X_uint8 = tf.clip_by_value(tf.rint(X), 0, 255)
     red, green, blue = tf.split(X, 3, 3)
     X_bgr = tf.concat([
-            blue - VGG_MEAN[2],
+            blue - VGG_MEAN[0],
             green - VGG_MEAN[1],
-            red - VGG_MEAN[0],
+            red - VGG_MEAN[2],
             # TODO: swap 0 and 2. should be 2,1,0 according to Keras' original code.
         ], 3)
+
+    # x[:, :, :, 0] -= 103.939
+    # x[:, :, :, 1] -= 116.779
+    # x[:, :, :, 2] -= 123.68
     return X_bgr
 
 # It looks Keras-Lambda layer doesn't support numpy operations.

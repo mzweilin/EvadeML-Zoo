@@ -61,6 +61,13 @@ class ImageNetDataset:
         X /= 255
         return X, Y
 
+    def get_test_data(self, img_size, idx_begin, idx_end):
+        # Return part of the dataset.
+        self.image_size = img_size
+        X, Y = data_imagenet(self.img_folder, self.image_size, selected_idx=range(idx_begin, idx_end))
+        X /= 255
+        return X, Y
+
     def load_model_by_name(self, model_name, logits=False, input_range_type=1, input_tensor = None):
         """
         :params logits: no softmax layer if True.
