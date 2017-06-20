@@ -22,7 +22,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('dataset_name', 'MNIST', 'Supported: MNIST, CIFAR-10, ImageNet.')
 flags.DEFINE_integer('nb_examples', 100, 'The number of examples selected for attacks.')
 flags.DEFINE_boolean('test_mode', False, 'Only select one sample for each class.')
-flags.DEFINE_string('model_name', 'carlini', 'Supported: carlini for MNIST and CIFAR-10; cleverhans and cleverhans_adv_trained for MNIST; resnet50 for ImageNet.')
+flags.DEFINE_string('model_name', 'carlini', 'Supported: carlini for MNIST and CIFAR-10; cleverhans and cleverhans_adv_trained for MNIST; resnet50, vgg19 and inceptionv3 for ImageNet.')
 flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000;CarliniL2?targeted=next&batch_size=10&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples for each attack, enabled by default.')
 flags.DEFINE_string('defense', 'feature_squeezing1', 'Supported: feature_squeezing.')
@@ -112,6 +112,7 @@ def main(argv=None):
 
     from utils.output import format_number_range
     selected_example_idx_ranges = format_number_range(sorted(selected_idx))
+    print ( "Selected %d examples." % len(selected_idx))
     print ( "Selected index in test set (sorted): %s" % selected_example_idx_ranges )
 
     X_test, Y_test, Y_pred = X_test_all[selected_idx], Y_test_all[selected_idx], Y_pred_all[selected_idx]
@@ -142,6 +143,7 @@ def main(argv=None):
 
     from utils.output import save_task_descriptor
     save_task_descriptor(FLAGS.result_folder, [task])
+
 
     # 5. Generate adversarial examples.
     from attacks import maybe_generate_adv_examples, parse_attack_string
@@ -199,6 +201,7 @@ def main(argv=None):
 
         print ("\n---Attack: %s" % attack_string)
         rec = evaluate_adversarial_examples(X_test, X_test_adv, Y_test_target.copy(), targeted, model_predict)
+        print ("Duration per sample: %.1fs" % dur_per_sample)
         rec['dataset_name'] = FLAGS.dataset_name
         rec['model_name'] = FLAGS.model_name
         rec['attack_string'] = attack_string
@@ -207,7 +210,7 @@ def main(argv=None):
         to_csv.append(rec)
 
         # 5.2 Adversarial examples being discretized to uint8.
-        print ("\n---Attack: %s" % attack_string)
+        print ("\n---Attack (uint8): %s" % attack_string)
         X_test_adv_discret = reduce_precision_np(X_test_adv, 256)
         rec = evaluate_adversarial_examples(X_test, X_test_adv_discret, Y_test_target.copy(), targeted, model_predict)
         rec['dataset_name'] = FLAGS.dataset_name
