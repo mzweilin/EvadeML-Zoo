@@ -26,7 +26,7 @@ def scaling_tf(X, input_range_type):
     return X
 
 
-def __create_mobilenet(classes, img_input, include_top, alpha, depth_multiplier, dropout, pooling):
+def __create_mobilenet(classes, img_input, include_top, alpha, depth_multiplier, dropout, pooling, logits):
     ''' Creates a MobileNet model with specified parameters
     Args:
         classes: Number of output classes
@@ -79,8 +79,15 @@ def __create_mobilenet(classes, img_input, include_top, alpha, depth_multiplier,
         x = Reshape(shape, name='reshape_1')(x)
         x = Dropout(dropout, name='dropout')(x)
         x = Convolution2D(classes, (1, 1), padding='same', name='conv_preds')(x)
-        x = Activation('softmax', name='act_softmax')(x)
+        # Reshape from (?, 1, 1, 1000)  to (?, 1000)
         x = Reshape((classes,), name='reshape_2')(x)
+
+        # Move Reshape before Actionvation. Otherwise, Cleverhans gets confused in fetching logits output.
+        if logits:
+            activation_name = None
+        else:
+            activation_name = 'softmax'
+        x = Activation(activation_name, name='activation')(x)
     else:
         if pooling == 'avg':
             x = GlobalAveragePooling2D()(x)
@@ -91,7 +98,8 @@ def __create_mobilenet(classes, img_input, include_top, alpha, depth_multiplier,
 
 def MobileNets(input_shape=None, alpha=1.0, depth_multiplier=1,
                dropout=1e-3, include_top=True, weights='imagenet',
-               input_tensor=None, pooling=None, classes=1000):
+               input_tensor=None, pooling=None, classes=1000,
+               logits=False, input_range_type=1):
     ''' Instantiate the MobileNet architecture.
         Note that only TensorFlow is supported for now,
         therefore it only works with the data format
@@ -192,7 +200,10 @@ def MobileNets(input_shape=None, alpha=1.0, depth_multiplier=1,
         else:
             img_input = input_tensor
 
-    x = __create_mobilenet(classes, img_input, include_top, alpha, depth_multiplier, dropout, pooling)
+    # Scaling
+    # x = __create_mobilenet(classes, img_input, include_top, alpha, depth_multiplier, dropout, pooling, logits)
+    x = Lambda(lambda x: scaling_tf(x, input_range_type))(img_input)
+    x = __create_mobilenet(classes, x, include_top, alpha, depth_multiplier, dropout, pooling, logits)
 
     # Ensure that the model takes into account
     # any potential predecessors of `input_tensor`.
@@ -202,8 +213,6 @@ def MobileNets(input_shape=None, alpha=1.0, depth_multiplier=1,
         inputs = img_input
     # Create model.
     model = Model(inputs, x, name='mobilenet')
-
-    model.summary()
 
     # load weights
     if weights == 'imagenet':
