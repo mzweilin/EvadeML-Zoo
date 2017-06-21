@@ -22,7 +22,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('dataset_name', 'MNIST', 'Supported: MNIST, CIFAR-10, ImageNet.')
 flags.DEFINE_integer('nb_examples', 100, 'The number of examples selected for attacks.')
 flags.DEFINE_boolean('test_mode', False, 'Only select one sample for each class.')
-flags.DEFINE_string('model_name', 'carlini', 'Supported: carlini for MNIST and CIFAR-10; cleverhans and cleverhans_adv_trained for MNIST; resnet50, vgg19 and inceptionv3 for ImageNet.')
+flags.DEFINE_string('model_name', 'carlini', 'Supported: carlini for MNIST and CIFAR-10; cleverhans and cleverhans_adv_trained for MNIST; ResNet50, VGG19, Inceptionv3 and MobileNet for ImageNet.')
 flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000;CarliniL2?targeted=next&batch_size=10&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples for each attack, enabled by default.')
 flags.DEFINE_string('defense', 'feature_squeezing1', 'Supported: feature_squeezing.')
@@ -30,6 +30,7 @@ flags.DEFINE_string('detection', 'feature_squeezing', 'Supported: feature_squeez
 flags.DEFINE_string('result_folder', "results", 'The output folder for results.')
 flags.DEFINE_boolean('verbose', False, 'Stdout level. The hidden content will be saved to log files anyway.')
 
+FLAGS.model_name =FLAGS.model_name.lower()
 
 def load_tf_session():
     # Set TF random seed to improve reproducibility
@@ -61,7 +62,7 @@ def main(argv=None):
         if FLAGS.model_name == 'inceptionv3':
             img_size = 299
         else:
-            img_size = 244
+            img_size = 224
         X_test_all, Y_test_all = dataset.get_test_data(img_size, 0, 100)
     else:
         X_test_all, Y_test_all = dataset.get_test_dataset()
@@ -297,10 +298,13 @@ def main(argv=None):
             # 7.2 Enumerate all specified detection methods.
             # Feature Squeezing as an example.
             from defenses.feature_squeezing.detection import FeatureSqueezingDetector
+
+            # Could be too slow for really deep models.
             for layer_id in range(len(model.layers)):
-                # if layer_id < len(model.layers)-3:
-                #     continue
-                for normalizer in ['softmax', 'unit_norm', 'none']:
+                if layer_id < len(model.layers)-1:
+                    continue
+                # for normalizer in ['softmax', 'unit_norm', 'none']:
+                for normalizer in ['unit_norm', 'none']:
                     for distance_metric in ['kl_f', 'kl_b', 'l1', 'l2']:
                         detector = FeatureSqueezingDetector(model=model, layer_id=layer_id, squeezer_name='median_smoothing_2', distance_metric_name=distance_metric, normalizer=normalizer)
                         detector.train(X_detect_train, Y_detect_train)

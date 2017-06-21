@@ -9,6 +9,8 @@ The goal of this project:
 
 ## 1. Install dependencies.
 
+Python 2.7
+
 ```bash
 pip install tensorflow-gpu==1.1.0 keras==2.0.4 matplotlib h5py pillow scikit-learn click future
 ```
