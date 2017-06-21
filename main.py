@@ -241,17 +241,8 @@ def main(argv=None):
         show_imgs_in_rows(rows, img_fpath)
         print ('\n===Adversarial image examples are saved in ', img_fpath)
 
-    # TODO: 5.5 Investigate how adversarial perturbation propagate throughout layers.
+        # TODO: output the prediction and confidence for each example, both legitimate and adversarial.
 
-    # Inputs
-    # from defenses.feature_squeezing.propagation import view_propagation
-
-    # for X_test_adv in X_test_adv_list:
-    #     view_propagation(X_test, X_test_adv, model)
-
-    # view_propagation(X_test, X_test+0.105, model)
-
-    # return
 
     # 6. Evaluate defense techniques.
     if FLAGS.defense == 'feature_squeezing':

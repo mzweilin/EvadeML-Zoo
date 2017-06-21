@@ -17,25 +17,26 @@ pip install tensorflow-gpu==1.1.0 keras==2.0.4 matplotlib h5py pillow scikit-lea
 
 ## 2. Usage of `python main.py`
 ```bash
-usage: main.py [-h] [--dataset_name DATASET_NAME] [--nb_examples NB_EXAMPLES]
+usage: python main.py [-h] [--dataset_name DATASET_NAME] [--nb_examples NB_EXAMPLES]
                [--test_mode [TEST_MODE]] [--notest_mode]
                [--model_name MODEL_NAME] [--attacks ATTACKS]
                [--visualize [VISUALIZE]] [--novisualize] [--defense DEFENSE]
                [--detection DETECTION] [--result_folder RESULT_FOLDER]
+               [--verbose [VERBOSE]] [--noverbose]
 
 optional arguments:
   -h, --help            show this help message and exit
   --dataset_name DATASET_NAME
                         Supported: MNIST, CIFAR-10, ImageNet.
   --nb_examples NB_EXAMPLES
-                        The number of examples selected for attacks. Invalid in test mode.
+                        The number of examples selected for attacks.
   --test_mode [TEST_MODE]
                         Only select one sample for each class.
   --notest_mode
   --model_name MODEL_NAME
                         Supported: carlini for MNIST and CIFAR-10; cleverhans
-                        and cleverhans_adv_trained for MNIST; resnet50 for
-                        ImageNet.
+                        and cleverhans_adv_trained for MNIST; ResNet50, VGG19,
+                        Inceptionv3 and MobileNet for ImageNet.
   --attacks ATTACKS     Attack name and parameters in URL style, separated by
                         semicolon.
   --visualize [VISUALIZE]
@@ -47,6 +48,9 @@ optional arguments:
                         Supported: feature_squeezing.
   --result_folder RESULT_FOLDER
                         The output folder for results.
+  --verbose [VERBOSE]   Stdout level. The hidden content will be saved to log
+                        files anyway.
+  --noverbose
 
 ```
 
