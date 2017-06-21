@@ -10,3 +10,6 @@
 [submodule "externals/MobileNetworks"]
 	path = externals/MobileNetworks
 	url = https://github.com/titu1994/MobileNetworks.git
+[submodule "externals/universal"]
+	path = externals/universal
+	url = https://github.com/LTS4/universal.git
