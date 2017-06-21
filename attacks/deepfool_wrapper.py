@@ -7,6 +7,19 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import load_externals
 from deepfool import deepfool
 
+import warnings
+
+def override_params(default, update):
+    for key in default:
+        if key in update:
+            val = update[key]
+            default[key] = val
+            del update[key]
+
+    if len(update) > 0:
+        warnings.warn("Ignored arguments: %s" % update.keys())
+    return default
+
 def generate_deepfool_examples(sess, model, x, y, X, Y, attack_params, verbose, attack_log_fpath):
     """
     Untargeted attack. Y is not needed.
@@ -27,10 +40,13 @@ def generate_deepfool_examples(sess, model, x, y, X, Y, attack_params, verbose, 
     print('>> Computing gradient function...')
     def grad_fs(image_inp, inds): return [sess.run(dydx[i], feed_dict={persisted_input: image_inp}) for i in inds]
 
+    params = {'num_classes': 10, 'overshoot': 0.02, 'max_iter': 50}
+    params = override_params(params, attack_params)
+
     adv_x_list = []
     for i in range(len(X)):
         image = X[i:i+1,:,:,:]
-        r_tot, loop_i, k_i, pert_image = deepfool(image, f, grad_fs, num_classes=10, overshoot=0.02, max_iter=50)
+        r_tot, loop_i, k_i, pert_image = deepfool(image, f, grad_fs, **params)
         adv_x_list.append(pert_image)
 
     return np.vstack(adv_x_list)
