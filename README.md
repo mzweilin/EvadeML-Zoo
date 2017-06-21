@@ -16,7 +16,7 @@ pip install tensorflow-gpu==1.1.0 keras==2.0.4 matplotlib h5py pillow scikit-lea
 ```
 
 ## 2. Usage of `python main.py`
-```bash
+```
 usage: python main.py [-h] [--dataset_name DATASET_NAME] [--nb_examples NB_EXAMPLES]
                [--test_mode [TEST_MODE]] [--notest_mode]
                [--model_name MODEL_NAME] [--attacks ATTACKS]
