@@ -104,7 +104,7 @@ class FeatureSqueezingDetector:
         return self.distance_func(val_orig, val_squeezed)
 
     def eval_layer_output(self, X, layer_id):
-        layer_output = Model(inputs=self.model.input, outputs=self.model.layers[layer_id].output)
+        layer_output = Model(inputs=self.model.layers[0].input, outputs=self.model.layers[layer_id].output)
         return layer_output.predict(X)
 
     def train(self, X, Y):

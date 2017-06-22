@@ -229,6 +229,7 @@ def main(argv=None):
     fieldnames = ['dataset_name', 'model_name', 'attack_string', 'duration_per_sample', 'discretization', 'success_rate', 'mean_confidence', 'mean_l2_dist', 'mean_li_dist', 'mean_l0_dist_value', 'mean_l0_dist_pixel']
     write_to_csv(to_csv, attacks_evaluation_csv_fpath, fieldnames)
 
+
     if FLAGS.visualize is True:
         from datasets.visualization import show_imgs_in_rows
         selected_idx_vis = get_first_example_id_each_class(Y_test)

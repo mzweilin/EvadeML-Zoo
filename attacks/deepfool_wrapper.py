@@ -28,7 +28,7 @@ def generate_deepfool_examples(sess, model, x, y, X, Y, attack_params, verbose, 
 
     f = model.predict
 
-    model_logits = Model(inputs=model.input, outputs=model.layers[-2].output)
+    model_logits = Model(inputs=model.layers[0].input, outputs=model.layers[-2].output)
 
     persisted_input = x
     persisted_output = model_logits(x)
