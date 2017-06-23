@@ -91,6 +91,7 @@ def main(argv=None):
 
 
     # 3. Evaluate the trained model.
+    # TODO: add top-5 accuracy for ImageNet.
     Y_pred_all = model.predict(X_test_all)
     mean_conf_all = calculate_mean_confidence(Y_pred_all, Y_test_all)
     # _, accuracy_all = model.evaluate(X_test_all, Y_test_all, batch_size=128)
@@ -192,8 +193,14 @@ def main(argv=None):
         x_adv_fname = "%s_%s.pickle" % (task_id, attack_string)
         x_adv_fpath = os.path.join(X_adv_cache_folder, x_adv_fname)
 
-        X_test_adv, duration = maybe_generate_adv_examples(sess, target_model, x, y, X_test, Y_test_target, attack_name, attack_params, use_cache = x_adv_fpath, verbose=FLAGS.verbose, attack_log_fpath=attack_log_fpath)
+        X_test_adv, aux_info = maybe_generate_adv_examples(sess, target_model, x, y, X_test, Y_test_target, attack_name, attack_params, use_cache = x_adv_fpath, verbose=FLAGS.verbose, attack_log_fpath=attack_log_fpath)
         X_test_adv_list.append(X_test_adv)
+
+        if isinstance(aux_info, float):
+            duration = aux_info
+        else:
+            print (aux_info)
+            duration = aux_info['duration']
 
         dur_per_sample = duration / len(X_test_adv)
 

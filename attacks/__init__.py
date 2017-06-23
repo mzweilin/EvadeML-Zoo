@@ -42,8 +42,15 @@ def maybe_generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_par
         X_adv = generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, verbose, attack_log_fpath)
         duration = time.time() - time_start
 
+        if not isinstance(X_adv, np.ndarray):
+            X_adv, aux_info = X_adv
+        else:
+            aux_info = {}
+
+        aux_info['duration'] = duration
+
         if use_cache:
-            pickle.dump((X_adv, duration), open(x_adv_fpath, 'wb'))
+            pickle.dump((X_adv, aux_info), open(x_adv_fpath, 'wb'))
     return X_adv, duration
 
 

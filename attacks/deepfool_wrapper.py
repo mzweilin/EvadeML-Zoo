@@ -8,6 +8,7 @@ from utils import load_externals
 from deepfool import deepfool
 
 import warnings
+import click
 
 def override_params(default, update):
     for key in default:
@@ -44,9 +45,22 @@ def generate_deepfool_examples(sess, model, x, y, X, Y, attack_params, verbose, 
     params = override_params(params, attack_params)
 
     adv_x_list = []
-    for i in range(len(X)):
-        image = X[i:i+1,:,:,:]
-        r_tot, loop_i, k_i, pert_image = deepfool(image, f, grad_fs, **params)
-        adv_x_list.append(pert_image)
+    aux_info = {}
+    aux_info['r_tot'] = []
+    aux_info['loop_i'] = []
+    aux_info['k_i'] = []
 
-    return np.vstack(adv_x_list)
+    with click.progressbar(range(0, len(X)), file=sys.stderr, show_pos=True,
+                           width=40, bar_template='  [%(bar)s] DeepFool Attacking %(info)s',
+                           fill_char='>', empty_char='-') as bar:
+        # Loop over the samples we want to perturb into adversarial examples
+        for i in bar:
+            image = X[i:i+1,:,:,:]
+            r_tot, loop_i, k_i, pert_image = deepfool(image, f, grad_fs, **params)
+            adv_x_list.append(pert_image)
+
+            aux_info['r_tot'].append(r_tot)
+            aux_info['loop_i'].append(loop_i)
+            aux_info['k_i'].append(k_i)
+
+    return np.vstack(adv_x_list), aux_info
