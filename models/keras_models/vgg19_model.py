@@ -125,11 +125,9 @@ def VGG19(include_top=True, weights='imagenet',
         x = Flatten(name='flatten')(x)
         x = Dense(4096, activation='relu', name='fc1')(x)
         x = Dense(4096, activation='relu', name='fc2')(x)
-        if logits:
-            activation_name = None
-        else:
-            activation_name = 'softmax'
-        x = Dense(classes, activation=activation_name, name='predictions')(x)
+        x = Dense(classes, name='predictions')(x)
+        if not logits:
+            x = Activation('softmax')(x)
     else:
         if pooling == 'avg':
             x = GlobalAveragePooling2D()(x)

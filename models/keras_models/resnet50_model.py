@@ -127,11 +127,9 @@ def ResNet50(include_top=True, weights='imagenet',
 
     if include_top:
         x = Flatten()(x)
-        if logits:
-            activation_name = None
-        else:
-            activation_name = 'softmax'
-        x = Dense(classes, activation=activation_name, name='fc1000')(x)
+        x = Dense(classes, name='fc1000')(x)
+        if not logits:
+            x = Activation('softmax')(x)
     else:
         if pooling == 'avg':
             x = GlobalAveragePooling2D()(x)

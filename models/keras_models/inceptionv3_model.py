@@ -6,7 +6,7 @@ from utils import load_externals
 from inception_v3 import *
 
 from keras.applications.imagenet_utils import _obtain_input_shape
-from keras.layers import  Lambda
+from keras.layers import Lambda, Activation
 
 # from .keras_models import scaling_tf
 
@@ -289,11 +289,9 @@ def InceptionV3(include_top=True,
     if include_top:
         # Classification block
         x = GlobalAveragePooling2D(name='avg_pool')(x)
-        if logits:
-            activation_name = None
-        else:
-            activation_name = 'softmax'
-        x = Dense(classes, activation=activation_name, name='predictions')(x)
+        x = Dense(classes, name='predictions')(x)
+        if not logits:
+            x = Activation('softmax')(x)
     else:
         if pooling == 'avg':
             x = GlobalAveragePooling2D()(x)

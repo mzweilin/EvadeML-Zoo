@@ -83,11 +83,8 @@ def __create_mobilenet(classes, img_input, include_top, alpha, depth_multiplier,
         x = Reshape((classes,), name='reshape_2')(x)
 
         # Move Reshape before Actionvation. Otherwise, Cleverhans gets confused in fetching logits output.
-        if logits:
-            activation_name = None
-        else:
-            activation_name = 'softmax'
-        x = Activation(activation_name, name='activation')(x)
+        if not logits:
+            x = Activation('softmax', name='activation')(x)
     else:
         if pooling == 'avg':
             x = GlobalAveragePooling2D()(x)
