@@ -25,7 +25,7 @@ class MNISTDataset:
         
         return X_test, Y_test
 
-    def load_model_by_name(self, model_name, logits=False, input_range_type=1):
+    def load_model_by_name(self, model_name, logits=False, input_range_type=1, pre_filter=lambda x:x):
         """
         :params logits: return logits(input of softmax layer) if True; return softmax output otherwise.
         :params input_range_type: {1: [0,1], 2:[-0.5, 0.5], 3:[-1, 1]...}
@@ -39,9 +39,9 @@ class MNISTDataset:
 
         # self.maybe_download_model()
         if model_name in ["cleverhans", 'cleverhans_adv_trained']:
-            model = cleverhans_mnist_model(logits=logits, input_range_type=input_range_type)
+            model = cleverhans_mnist_model(logits=logits, input_range_type=input_range_type, pre_filter=pre_filter)
         else:
-            model = carlini_mnist_model(logits=logits, input_range_type = input_range_type)
+            model = carlini_mnist_model(logits=logits, input_range_type = input_range_type, pre_filter=pre_filter)
         print("\n===Defined TensorFlow model graph.")
         model.load_weights(model_weights_fpath)
         print ("---Loaded MNIST-%s model.\n" % model_name)

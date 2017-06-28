@@ -8,21 +8,21 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten, Lambda
 from keras.layers import MaxPooling2D, Conv2D
 
-def cleverhans_mnist_model(logits=False, input_range_type=1):
+def cleverhans_mnist_model(logits=False, input_range_type=1, pre_filter=lambda x:x):
     input_shape = (28, 28, 1)
     nb_filters = 64
     nb_classes = 10
-    return cleverhans_model(input_shape, nb_filters, nb_classes, logits=logits, input_range_type=input_range_type)
+    return cleverhans_model(input_shape, nb_filters, nb_classes, logits, input_range_type, pre_filter)
 
 
 def cleverhans_cifar10_model(logits=False, input_range_type=1):
     input_shape = (32, 32, 3)
     nb_filters = 64
     nb_classes = 10
-    return cleverhans_model(input_shape, nb_filters, nb_classes, logits=logits, input_range_type=input_range_type)
+    return cleverhans_model(input_shape, nb_filters, nb_classes, logits, input_range_type)
 
 
-def cleverhans_model(input_shape, nb_filters, nb_classes, logits=False, input_range_type=1):
+def cleverhans_model(input_shape, nb_filters, nb_classes, logits, input_range_type, pre_filter):
     """
     Defines a CNN model using Keras sequential model
     :params logits: return logits(input of softmax layer) if True; return softmax output otherwise.
@@ -43,6 +43,7 @@ def cleverhans_model(input_shape, nb_filters, nb_classes, logits=False, input_ra
         scaler = lambda x: x/2+0.5
 
     layers = [Lambda(scaler, input_shape=input_shape)]
+    layers += [Lambda(pre_filter, output_shape=input_shape)]
 
     layers += [Dropout(0.2),
               conv_2d(nb_filters, (8, 8), (2, 2), "same"),
