@@ -64,7 +64,7 @@ def parse_attack_string(attack_string):
     attack_params = dict( (k, v if len(v)>1 else v[0] ) for k,v in attack_params.items())
 
     for k,v in attack_params.items():
-        if k in ['batch_size', 'max_iterations', 'num_classes', 'max_iter']:
+        if k in ['batch_size', 'max_iterations', 'num_classes', 'max_iter', 'nb_iter']:
             attack_params[k] = int(v)
         elif v == 'true':
             attack_params[k] = True

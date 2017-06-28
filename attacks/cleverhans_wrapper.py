@@ -41,6 +41,18 @@ def generate_fgsm_examples(sess, model, x, y, X, Y, attack_params, verbose, atta
     fgsm_params = {'eps': 0.1, 'ord': np.inf, 'y': None, 'clip_min': 0, 'clip_max': 1}
     fgsm_params = override_params(fgsm_params, attack_params)
 
+    # Modify attack here.
+    # fgm(x, self.model(x), y=self.y, eps=self.eps, ord=self.ord,
+    #                clip_min=self.clip_min, clip_max=self.clip_max)
+
+    # input_shape = list(X.shape)
+    # input_shape[0] = None
+    # fgsm._x = x
+    # fgsm._x_adv = self.generate(self._x, **kwargs)
+    # fgm(x, model(median(x)), y=self.y, eps=self.eps, ord=self.ord,
+    #                clip_min=self.clip_min, clip_max=self.clip_max)
+    # fgsm.parse_params(**fgsm_params)
+
     X_adv = fgsm.generate_np(X, **fgsm_params)
     return X_adv
 
