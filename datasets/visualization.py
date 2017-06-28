@@ -7,7 +7,7 @@ def show_img(pixel_array, mode=None):
     img.show()
 
 
-def show_imgs_in_rows(rows, fpath):
+def show_imgs_in_rows(rows, fpath=None):
     # TODO: get the maximum.
     width_num = len(rows[0])
     height_num = len(rows)
@@ -38,5 +38,6 @@ def show_imgs_in_rows(rows, fpath):
         x_offset = 0
         y_offset += img_height + y_margin
 
-    new_im.save(fpath)
+    if fpath is not None:
+        new_im.save(fpath)
     new_im.show()
