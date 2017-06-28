@@ -2,6 +2,30 @@ import tensorflow as tf
 import numpy as np
 from scipy import ndimage
 
+import cv2
+
+def adaptive_binarize(x, block_size=5, C=33.8):
+    "Works like an edge detector."
+    # ADAPTIVE_THRESH_GAUSSIAN_C, ADAPTIVE_THRESH_MEAN_C
+    # THRESH_BINARY, THRESH_BINARY_INV
+    func = lambda img: cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, block_size, C)
+    return opencv_binarize(x, func)
+
+
+def otsu_binarize(x):
+    func = lambda img: cv2.threshold(img, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)[1]
+    return opencv_binarize(x, func)
+
+
+def opencv_binarize(x, func):
+    x = np.rint(np.squeeze(x) * 255).astype(np.uint8)
+    x_ret = []
+    for img in x:
+        img_bin = func(img)
+        x_ret.append(img_bin)
+    return np.expand_dims((np.array(x_ret)/255.).astype(np.float32), 3)
+
+
 def reduce_precision_np(x, npp):
     """
     Reduce the precision of image, the numpy version.
