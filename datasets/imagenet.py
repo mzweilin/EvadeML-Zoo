@@ -68,7 +68,7 @@ class ImageNetDataset:
         X /= 255
         return X, Y
 
-    def load_model_by_name(self, model_name, logits=False, input_range_type=1, input_tensor = None):
+    def load_model_by_name(self, model_name, logits=False, input_range_type=1, input_tensor=None, pre_filter=lambda x:x):
         """
         :params logits: no softmax layer if True.
         :params scaling: expect [-0.5,0.5] input range if True, otherwise [0, 1]
@@ -80,7 +80,7 @@ class ImageNetDataset:
         elif model_name == 'inceptionv3':
             model = keras_inceptionv3_imagenet_model(logits=logits, input_range_type=input_range_type)
         elif model_name == 'mobilenet':
-            model = mobilenet_imagenet_model(logits=logits, input_range_type=input_range_type)
+            model = mobilenet_imagenet_model(logits=logits, input_range_type=input_range_type, pre_filter=pre_filter)
         else:
             raise Exception("Unsupported model: [%s]" % model_name)
 

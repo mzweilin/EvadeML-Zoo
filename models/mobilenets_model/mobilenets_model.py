@@ -96,7 +96,7 @@ def __create_mobilenet(classes, img_input, include_top, alpha, depth_multiplier,
 def MobileNets(input_shape=None, alpha=1.0, depth_multiplier=1,
                dropout=1e-3, include_top=True, weights='imagenet',
                input_tensor=None, pooling=None, classes=1000,
-               logits=False, input_range_type=1):
+               logits=False, input_range_type=1, pre_filter=lambda x:x):
     ''' Instantiate the MobileNet architecture.
         Note that only TensorFlow is supported for now,
         therefore it only works with the data format
@@ -200,6 +200,7 @@ def MobileNets(input_shape=None, alpha=1.0, depth_multiplier=1,
     # Scaling
     # x = __create_mobilenet(classes, img_input, include_top, alpha, depth_multiplier, dropout, pooling, logits)
     x = Lambda(lambda x: scaling_tf(x, input_range_type))(img_input)
+    x = Lambda(pre_filter, output_shape=input_shape)(x)
     x = __create_mobilenet(classes, x, include_top, alpha, depth_multiplier, dropout, pooling, logits)
 
     # Ensure that the model takes into account
@@ -235,10 +236,10 @@ def MobileNets(input_shape=None, alpha=1.0, depth_multiplier=1,
     return model
 
 
-def mobilenet_imagenet_model(logits=False, input_range_type=1):
+def mobilenet_imagenet_model(logits=False, input_range_type=1, pre_filter=None):
     input_shape = (224, 224, 3)
     model = MobileNets(input_shape=input_shape, alpha=1.0, depth_multiplier=1,
                dropout=1e-3, include_top=True, weights='imagenet',
                input_tensor=None, pooling=None, classes=1000,
-               logits=logits, input_range_type=input_range_type)
+               logits=logits, input_range_type=input_range_type, pre_filter=pre_filter)
     return model
