@@ -1,18 +1,20 @@
 import sklearn
+from sklearn.metrics import roc_curve, auc
 import numpy as np
 from scipy.stats import entropy
-import operator
-import functools
-
-from sklearn.metrics import roc_curve, auc
 from keras.models import Model
 
+import operator
+import functools
 import pdb
 import random
 import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from .squeeze import median_filter_np, binary_filter_np
+from .squeeze import median_filter_np, binary_filter_np, reduce_precision_np
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from utils.visualization import draw_plot
+
 
 def reshape_2d(x):
     if len(x.shape) > 2:
@@ -22,10 +24,11 @@ def reshape_2d(x):
         x = x.reshape((batch_size, num_dim/batch_size))
     return x
 
+
 # Normalization.
 # Two approaches: 1. softmax; 2. unit-length vector (unit norm).
 
-# Source: ?
+# Code Source: ?
 def softmax(z):
     assert len(z.shape) == 2
     s = np.max(z, axis=1)
@@ -44,19 +47,12 @@ def unit_norm(x):
     return normalize(x, axis=1)
 
 
-def get_tpr_fpr(true_labels, pred, threshold):
-    pred_labels = pred > threshold
-    TP = np.sum(np.logical_and(pred_labels == 1, true_labels == 1))
-    FP = np.sum(np.logical_and(pred_labels == 1, true_labels == 0))
-    return TP/np.sum(true_labels), FP/np.sum(1-true_labels)
-
 l1_dist = lambda x1,x2: np.sum(np.abs(x1 - x2), axis=tuple(range(len(x1.shape))[1:]))
 l2_dist = lambda x1,x2: np.sum((x1-x2)**2, axis=tuple(range(len(x1.shape))[1:]))**.5
 
 
-
 # Note: KL-divergence is not symentric.
-# Only for probability distribution.
+# Designed for probability distribution (e.g. softmax output).
 def kl(x1, x2):
     assert x1.shape == x2.shape
     # x1_2d, x2_2d = reshape_2d(x1), reshape_2d(x2)
@@ -67,82 +63,173 @@ def kl(x1, x2):
 
     # pdb.set_trace()
     e = entropy(x1_2d_t, x2_2d_t)
-    e[np.where(e==np.inf)] = 65535
+    e[np.where(e==np.inf)] = 2
     return e
 
+
 class FeatureSqueezingDetector:
-    def __init__(self, model, layer_id, squeezer_name, distance_metric_name, normalizer):
+    def __init__(self, model, data_model_name, attack_hash):
         self.model = model
+        self.name_prefix = "%s_%s" % (data_model_name, attack_hash)
+
+    def get_squeezer_by_name(self, name):
+        if name == 'binary_filter':
+            func = binary_filter_np
+        if name.startswith('bit_depth_'):
+            params = int(name[len('bit_depth_'):])
+            precisions = 2**params
+            func = lambda x: reduce_precision_np(x, precisions)
+        elif name.startswith('median_smoothing_'):
+            params = name[len('median_smoothing_'):]
+            params = map(int, params.split('_'))
+            if len(params) == 1:
+                params.append(params[0])
+            h, w = params
+            func = lambda x: median_filter_np(x, h, w)
+        return func
+
+    def get_normalizer_by_name(self, name):
+            d = {'unit_norm': unit_norm, 'softmax': softmax, 'none': lambda x:x}
+            return d[name]
+
+    def get_metric_by_name(self, name):
+        d = {'kl_f': lambda x1,x2: kl(x1, x2), 'kl_b': lambda x1,x2: kl(x2, x1), 'l1': l1_dist, 'l2': l2_dist}
+        return d[name]
+
+    def set_config(self, layer_id, normalizer_name, metric_name, squeezers_name):
         self.layer_id = layer_id
+        self.normalizer_name = normalizer_name
+        self.metric_name = metric_name
+        self.squeezers_name = squeezers_name
 
-        if distance_metric_name == 'l1':
-            self.distance_func = l1_dist
-        elif distance_metric_name == 'l2':
-            self.distance_func = l2_dist
-        elif distance_metric_name == 'kl_f':
-            self.distance_func = lambda x1,x2: kl(x1, x2)
-        elif distance_metric_name == 'kl_b':
-            self.distance_func = lambda x1,x2: kl(x2, x1)
+    def get_config(self):
+        return self.layer_id, self.normalizer_name, self.metric_name, self.squeezers_name
 
-        if normalizer == 'softmax':
-            self.normalize = softmax
-        elif normalizer == 'unit_norm':
-            self.normalize = unit_norm
-        elif normalizer == 'none':
-            self.normalize = lambda x:x
+    # Visualize the propagation of perturbations.
+    # Scenerio 1: Assume we have a perfect squeezer that always recover adversarial example to legitimate. The distance of legitimate is zero.
+    # Scenerio 2: Use one(or several) feature squeezer(s) that barely affect the legitimate example. The distance of legitimate may be positive.
+    def view_adv_propagation(self, X, X_adv, squeezers_name):
+        """
+        Assume we have a perfeect feature squeezer that always recover a given adversariale example to the legitimate version.
+        The distance of legitimate is zero then.
+        We want to find out which layer has the most different output between the adversarial and legitimate example pairs, 
+            under several measurements.
+        """
+        model = self.model
 
-        if squeezer_name == 'binary_filter':
-            self.squeezer = lambda x: binary_filter_np(x)
-        elif squeezer_name == 'median_smoothing_2':
-            self.squeezer = lambda x: median_filter_np(x, 2)
+        for layer in model.layers:
+            shape_size = functools.reduce(operator.mul, layer.output_shape[1:])
+            print (layer.name, shape_size)
 
-    def get_distance(self, X):
-        val_orig = self.eval_layer_output(X, self.layer_id)
-        val_squeezed = self.eval_layer_output(self.squeezer(X), self.layer_id)
+        xs = np.arange(len(model.layers))
 
-        val_orig, val_squeezed = self.normalize(reshape_2d(val_orig)), self.normalize(reshape_2d(val_squeezed))
-        return self.distance_func(val_orig, val_squeezed)
+        ret = []
+
+        for normalizer in ['unit_norm', 'softmax', 'none']:
+            normalize_func = self.get_normalizer_by_name(normalizer)
+            label_list = []
+            series_list = []
+
+            if normalizer == "softmax":
+                metric_list = ['kl_f', 'kl_b', 'l1', 'l2']
+            else:
+                metric_list = ['l1', 'l2']
+            for distance_metric_name in metric_list:
+                distance_func = self.get_metric_by_name(distance_metric_name)
+
+                series = []
+
+                for layer_id in range(len(model.layers)):
+                    self.set_config(layer_id, normalizer, distance_metric_name, squeezers_name)
+
+                    if len(squeezers_name) > 0:
+                        # With feature squeezers: Scenerio 2.
+                        distance = self.get_distance(X_adv) - self.get_distance(X)
+                    else:
+                        # Assume a perfect feature squeezer: Scenerio 1.
+                        distance = self.get_distance(X, X_adv)
+                    mean_dist = np.mean(distance)
+                    series.append(mean_dist)
+
+                series = np.array(series).astype(np.double)
+                series = series/np.max(series)
+                series_list.append(series)
+                label_list.append("%s_%s" % (normalizer, distance_metric_name))
+
+                layer_id = np.argmax(series)
+                print ("Best: Metric-%s at Layer-%d, normalized by %s" % (distance_metric_name, layer_id, normalizer))
+                ret.append([layer_id, normalizer, distance_metric_name])
+
+            draw_plot(xs, series_list, label_list, "./%s_%s.png" % (self.name_prefix, normalizer))
+
+        return ret
+
+    def calculate_distance_max(self, val_orig, vals_squeezed, metric_name):
+        distance_func = self.get_metric_by_name(metric_name)
+
+        dist_array = []
+        for val_squeezed in vals_squeezed:
+            dist = distance_func(val_orig, val_squeezed)
+            dist_array.append(dist)
+
+        dist_array = np.array(dist_array)
+        return np.max(dist_array, axis=0)
+
+    def get_distance(self, X1, X2=None):
+        layer_id, normalizer_name, metric_name, squeezers_name = self.get_config()
+
+        normalize_func = self.get_normalizer_by_name(normalizer_name)
+        input_to_normalized_output = lambda x: normalize_func(reshape_2d(self.eval_layer_output(x, layer_id)))
+
+        val_orig_norm = input_to_normalized_output(X1)
+
+        if X2 is None:
+            vals_squeezed = []
+            for squeezer_name in squeezers_name:
+                squeeze_func = self.get_squeezer_by_name(squeezer_name)
+                val_squeezed_norm = input_to_normalized_output(squeeze_func(X1))
+                vals_squeezed.append(val_squeezed_norm)
+            distance = self.calculate_distance_max(val_orig_norm, vals_squeezed, metric_name)
+        else:
+            val_1_norm = val_orig_norm
+            val_2_norm = input_to_normalized_output(X2)
+            distance_func = self.get_metric_by_name(metric_name)
+            distance = distance_func(val_1_norm, val_2_norm)
+
+        return distance
 
     def eval_layer_output(self, X, layer_id):
         layer_output = Model(inputs=self.model.layers[0].input, outputs=self.model.layers[layer_id].output)
         return layer_output.predict(X)
 
-    def train(self, X, Y):
-        X_l1 = self.get_distance(X)
+    # Only examine the legitimate examples to get the threshold, ensure low False Positive rate.
+    def train(self, X, Y, tnr = 0.95):
+        """
+        Calculating distance depends on:
+            layer_id
+            normalizer
+            distance metric
+            feature squeezer(s)
+        """
+        layer_id, normalizer_name, metric_name, squeezers_name = self.get_config()
 
-        fpr, tpr, thresholds = roc_curve(Y, X_l1)
-        accuracy = [ sklearn.metrics.accuracy_score(Y, X_l1>threshold, normalize=True, sample_weight=None) for threshold in thresholds ]
-        roc_auc = auc(fpr, tpr)
+        neg_idx = np.where(Y == 0)[0]
+        X_neg = X[neg_idx]
+        distances = self.get_distance(X_neg)
 
-        idx_best = np.argmax(accuracy)
-        threshold = thresholds[idx_best]
-        # print ("Best training accuracy: %.4f, TPR(Recall): %.4f, FPR: %.4f @%.4f" % (accuracy[idx_best], tpr[idx_best], fpr[idx_best], thresholds[idx_best]))
-        # print ("ROC_AUC: %.4f" % roc_auc)
-
-        self.thresholds = thresholds
+        selected_distance_idx = int(np.ceil(len(X_neg) * tnr))
+        threshold = sorted(distances)[selected_distance_idx-1]
         self.threshold = threshold
-        self.idx_best = idx_best
 
     def test(self, X, Y):
-        idx_best = self.idx_best
-        thresholds = self.thresholds
-        threshold = thresholds[idx_best]
+        layer_id, normalizer_name, metric_name, squeezers_name = self.get_config()
 
-        X_l1 = self.get_distance(X)
+        distances = self.get_distance(X)
 
-        accuracy_val = [ sklearn.metrics.accuracy_score(Y, X_l1>threshold, normalize=True, sample_weight=None) for threshold in thresholds ]
-        tpr_val, fpr_val = zip(*[ get_tpr_fpr(Y, X_l1, threshold)  for threshold in thresholds  ])
-        # print ("Validation accuracy: %.4f, TPR(Recall): %.4f, FPR: %.4f @%.4f" % (accuracy_val[idx_best], tpr_val[idx_best], fpr_val[idx_best], thresholds[idx_best]))
+        fprs, tprs, thresholds = roc_curve(Y, distances)
+        roc_auc = auc(fprs, tprs)
 
-        fpr, tpr, thresholds = roc_curve(Y, X_l1)
-        roc_auc = auc(fpr, tpr)
-        # print ("ROC_AUC_validated: %.4f" % roc_auc)
+        threshold = self.threshold
+        Y_pred = distances > threshold
 
-        ret = {}
-        ret['threshold'] = threshold
-        ret['accuracy'] = accuracy_val[idx_best]
-        ret['fpr'] = fpr_val[idx_best]
-        ret['tpr'] = tpr_val[idx_best]
-        ret['roc_auc'] = roc_auc
-
-        return ret
+        return Y_pred, roc_auc, threshold

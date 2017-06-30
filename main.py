@@ -26,7 +26,7 @@ flags.DEFINE_string('model_name', 'carlini', 'Supported: carlini for MNIST and C
 flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000;CarliniL2?targeted=next&batch_size=10&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples for each attack, enabled by default.')
 flags.DEFINE_string('defense', 'feature_squeezing1', 'Supported: feature_squeezing.')
-flags.DEFINE_string('detection', 'feature_squeezing', 'Supported: feature_squeezing.')
+flags.DEFINE_string('detection', 'feature_squeezing1', 'Supported: feature_squeezing.')
 flags.DEFINE_string('result_folder', "results", 'The output folder for results.')
 flags.DEFINE_boolean('verbose', False, 'Stdout level. The hidden content will be saved to log files anyway.')
 
@@ -82,11 +82,17 @@ def main(argv=None):
           2. "model_carlini" for Carlini/Wagner's attacks.
         The scaling argument, 'input_range_type': {1: [0,1], 2:[-0.5, 0.5], 3:[-1, 1]...}
         """
+
+        # With median_filter.
+        from utils.median import median_filter
+        pre_filter = lambda x:median_filter(x, 3, 3)
+        model_median = dataset.load_model_by_name(FLAGS.model_name, logits=False, input_range_type=1, pre_filter=pre_filter)
+
         model = dataset.load_model_by_name(FLAGS.model_name, logits=False, input_range_type=1)
         model.compile(loss='categorical_crossentropy',optimizer='sgd', metrics=['acc'])
 
         # Carlini/Wagner's attack implementations require the input range [-0.5, 0.5].
-        model_carlini = dataset.load_model_by_name(FLAGS.model_name, logits=True, input_range_type=2)
+        model_carlini = dataset.load_model_by_name(FLAGS.model_name, logits=True, input_range_type=2, pre_filter=pre_filter)
         model_carlini.compile(loss='categorical_crossentropy',optimizer='sgd', metrics=['acc'])
 
 
@@ -185,10 +191,17 @@ def main(argv=None):
             # TODO: only adding the param for Carlini's attacks.
             Y_test_target = Y_test
 
+        # TODO: Add support to defense-aware attacks. (adaptive adversary.)
+        """
+        Diffrentiable layers: embeded into the target model. (Try if we can dynamically insert the filter layer to a Keras model.)
+        Non-diffrentialble layers: a separated model for testing. Iteratively, adding gaussian noise to the seed examples.
+        """
         if 'carlini' in attack_name:
             target_model = model_carlini
         else:
             target_model = model
+
+        # target_model = model_median
 
         x_adv_fname = "%s_%s.pickle" % (task_id, attack_string)
         x_adv_fpath = os.path.join(X_adv_cache_folder, x_adv_fname)
@@ -236,6 +249,18 @@ def main(argv=None):
     fieldnames = ['dataset_name', 'model_name', 'attack_string', 'duration_per_sample', 'discretization', 'success_rate', 'mean_confidence', 'mean_l2_dist', 'mean_li_dist', 'mean_l0_dist_value', 'mean_l0_dist_pixel']
     write_to_csv(to_csv, attacks_evaluation_csv_fpath, fieldnames)
 
+    # Visualize the propagation of perturbations.
+    # Scenerio 1: Assume we have a perfect squeezer that always recover adversarial example to legitimate. The distance of legitimate is zero.
+    # Scenerio 2: Use one(or several) feature squeezer(s) that barely affect the legitimate example. The distance of legitimate may be positive.
+    # from defenses.feature_squeezing.propagation import view_propagation
+    # view_propagation(X_test, X_test_adv_list[0], model, 'adv')
+
+    # from defenses.feature_squeezing.squeeze import median_filter_np
+    # squeezers = [lambda x: median_filter_np(x, 3)]
+    # view_propagation(X_test, X_test_adv_list[0], model, 'adv_leg', )
+
+
+
 
     if FLAGS.visualize is True:
         from datasets.visualization import show_imgs_in_rows
@@ -245,7 +270,17 @@ def main(argv=None):
         rows = [legitimate_examples]
         rows += map(lambda x:x[selected_idx_vis], X_test_adv_list)
 
+        from defenses.feature_squeezing.squeeze import median_filter_np
+        from defenses.feature_squeezing.squeeze import otsu_binarize, adaptive_binarize
+        if len(X_test_adv_list) == 1:
+            rows += [median_filter_np(X_test_adv_list[0][selected_idx_vis], 2, 2)]
+            rows += [median_filter_np(X_test_adv_list[0][selected_idx_vis], 3, 3)]
+            # otsu_binarize, adaptive_binarize
+            # rows += [otsu_binarize(X_test_adv_list[0][selected_idx_vis])]
+            # rows += [adaptive_binarize(X_test_adv_list[0][selected_idx_vis])]
+
         img_fpath = os.path.join(FLAGS.result_folder, '%s_attacks_%s_examples.png' % (task_id, attack_string_hash) )
+        # pdb.set_trace()
         show_imgs_in_rows(rows, img_fpath)
         print ('\n===Adversarial image examples are saved in ', img_fpath)
 
@@ -272,49 +307,101 @@ def main(argv=None):
     # All data should be discretized to uint8.
     X_test_adv_discretized_list = [ reduce_precision_np(X_test_adv, 256) for X_test_adv in X_test_adv_list]
     del X_test_adv_list
+    # X_test_adv_discretized_list = X_test_adv_list
 
-    if FLAGS.detection is not None:
-        from utils.detection import get_detection_dataset, get_train_test_idx
+    if FLAGS.detection == 'feature_squeezing':
+        from utils.detection import get_balanced_detection_dataset, get_train_test_idx, evalulate_detection_test
 
-        csv_fname = "%s_attacks_%s_detection_%s.csv" % (task_id, attack_string_hash, FLAGS.detection)
+        # 7.1 Prepare the dataset for detection.
+        """
+        Get the index of failed adversarial examples, and the respective attack method.
+            In this way, we can know if the false negatives are failed adversarial examples.
+
+        Failed adversarial examples: 
+            should count as negative in TPR
+            should count as positive in FPR
+        """
+
+
+        X_detect, Y_detect, failed_adv_idx = get_balanced_detection_dataset(X_test_all, Y_test, X_test_adv_discretized_list, predict_func=model.predict)
+        print ("Positive ratio in detection dataset %d/%d" % (np.sum(Y_detect), len(Y_detect)))
+
+        train_ratio = 0.5
+        train_idx, test_idx = get_train_test_idx(train_ratio, len(Y_detect))
+
+        X_detect_train, Y_detect_train = X_detect[train_idx], Y_detect[train_idx]
+        X_detect_test, Y_detect_test = X_detect[test_idx], Y_detect[test_idx]
+
+        print ("Positive ratio in train %d/%d" % (np.sum(Y_detect_train), len(Y_detect_train)))
+        print ("Positive ratio in test %d/%d" % (np.sum(Y_detect_test), len(Y_detect_test)))
+
+        # 7.2 Enumerate all specified detection methods.
+        # Feature Squeezing as an example.
+
+        csv_fname = "%s_attacks_%s_detection_two_filters_%s_raw_adv.csv" % (task_id, attack_string_hash, FLAGS.detection)
         detection_csv_fpath = os.path.join(FLAGS.result_folder, csv_fname)
         to_csv = []
-        for failed_adv_as_positve in [True, False]:
-            # 7.1 Prepare the dataset for detection.
-            X_detect, Y_detect = get_detection_dataset(X_test_all, Y_test, X_test_adv_discretized_list, failed_adv_as_positve, predict_func=model.predict)
-            print ("Positive ratio in detection dataset %d/%d" % (np.sum(Y_detect), len(Y_detect)))
+
+        from defenses.feature_squeezing.detection import FeatureSqueezingDetector
+        fsd = FeatureSqueezingDetector(model, task_id, attack_string_hash)
+
+        # TODO: Automatically get the suitable squeezers through robustness test with legitimate examples.
+        # squeezers_name = fsd.select_squeezers(X_test, Y_test, accuracy_preserved=0.9)
+
+        if FLAGS.dataset_name == "MNIST":
+            squeezers_name = ['median_smoothing_2', 'median_smoothing_3', 'binary_filter']
+        elif FLAGS.dataset_name == "CIFAR-10":
+            # Squeezers for CIFAR-10 and ImageNet
+            squeezers_name = ["bit_depth_6", 'median_smoothing_1_2', 'median_smoothing_2_1','median_smoothing_2']
+        elif FLAGS.dataset_name == "ImageNet":
+            squeezers_name = ["bit_depth_5", 'median_smoothing_1_2', 'median_smoothing_2_1','median_smoothing_2']
 
 
-            train_ratio = 0.5
-            train_idx, test_idx = get_train_test_idx(train_ratio, len(Y_detect))
+        # best_metrics = fsd.view_adv_propagation(X_test, X_test_adv_list[0], squeezers_name)
+        best_metrics = [[len(model.layers)-1, 'none', 'kl_f']]
 
-            X_detect_train, Y_detect_train = X_detect[train_idx], Y_detect[train_idx]
-            X_detect_test, Y_detect_test = X_detect[test_idx], Y_detect[test_idx]
+        for layer_id, normalizer_name, metric_name in best_metrics:
+            fsd.set_config(layer_id, normalizer_name, metric_name, squeezers_name)
+            print ("===Detection config: Layer-%d, Metric-%s, Norm-%s" % (layer_id, metric_name, normalizer_name))
+            fsd.train(X_detect_train, Y_detect_train)
+            Y_detect_pred, roc_auc, threshold = fsd.test(X_detect_test, Y_detect_test)
+            accuracy, tpr, fpr = evalulate_detection_test(Y_detect_test, Y_detect_pred)
+            print ("ROC-AUC: %.2f, Accuracy: %.2f, TPR: %.2f, FPR: %.2f, Threshold: %.2f." % (roc_auc, accuracy, tpr, fpr, threshold))
 
-            print ("Positive ratio in train %d/%d" % (np.sum(Y_detect_train), len(Y_detect_train)))
-            print ("Positive ratio in test %d/%d" % (np.sum(Y_detect_test), len(Y_detect_test)))
+            ret = {}
+            ret['threshold'] = threshold
+            ret['accuracy'] = accuracy
+            ret['fpr'] = fpr
+            ret['tpr'] = tpr
+            ret['roc_auc'] = roc_auc
 
-            # 7.2 Enumerate all specified detection methods.
-            # Feature Squeezing as an example.
-            from defenses.feature_squeezing.detection import FeatureSqueezingDetector
+            # index of false negatives
+            fn_idx = np.where((Y_detect_test == True) & (Y_detect_pred == False))
+            # index in Y_detect.
+            fn_idx_Y_test = np.array(test_idx)[fn_idx]
 
-            # Could be too slow for really deep models.
-            for layer_id in range(len(model.layers)):
-                if layer_id < len(model.layers)-1:
-                    continue
-                # for normalizer in ['softmax', 'unit_norm', 'none']:
-                for normalizer in ['unit_norm', 'none']:
-                    for distance_metric in ['kl_f', 'kl_b', 'l1', 'l2']:
-                        detector = FeatureSqueezingDetector(model=model, layer_id=layer_id, squeezer_name='median_smoothing_2', distance_metric_name=distance_metric, normalizer=normalizer)
-                        detector.train(X_detect_train, Y_detect_train)
-                        detect_perf_rec = detector.test(X_detect_test, Y_detect_test)
-                        detect_perf_rec['failed_adv_as_positve'] = failed_adv_as_positve
-                        detect_perf_rec['layer_id'] = layer_id
-                        detect_perf_rec['distance_metric'] = distance_metric
-                        detect_perf_rec['normalizer'] = normalizer
-                        to_csv.append(detect_perf_rec)
+            nb_failed_as_negative = len(fn_idx_Y_test) - len(set(fn_idx_Y_test) - set(failed_adv_idx))
+            print ("%d/%d failed adv. examples in false negatives." % (nb_failed_as_negative, len(fn_idx_Y_test)))
 
-        fieldnames = ['failed_adv_as_positve', 'layer_id', 'distance_metric', 'normalizer', 'roc_auc', 'accuracy', 'tpr', 'fpr', 'threshold']
+            ret['fn'] = len(fn_idx_Y_test)
+            ret['failed_adv_as_fn'] = nb_failed_as_negative
+
+            tp_idx = np.where((Y_detect_test == True) & (Y_detect_pred == True))
+            tp_idx_Y_test = np.array(test_idx)[tp_idx]
+            nb_failed_as_positive = len(tp_idx_Y_test) - len(set(tp_idx_Y_test) - set(failed_adv_idx))
+            print ("%d/%d failed adv. examples in true positives." % (nb_failed_as_positive, len(tp_idx_Y_test)))
+
+
+
+            # index of false positives
+            # fp_idx = np.where((Y_detect_test == False) & (Y_detect_pred == True))
+
+            ret['layer_id'] = layer_id
+            ret['normalizer'] = normalizer_name
+            ret['distance_metric'] = metric_name
+            to_csv.append(ret)
+
+        fieldnames = ['layer_id', 'distance_metric', 'normalizer', 'roc_auc', 'accuracy', 'tpr', 'fpr', 'threshold', 'failed_adv_as_fn', 'fn']
         write_to_csv(to_csv, detection_csv_fpath, fieldnames)
 
 if __name__ == '__main__':
