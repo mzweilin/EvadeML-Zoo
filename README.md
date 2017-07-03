@@ -1,4 +1,4 @@
-# AdvZoo
+# EvadeML-Zoo
 
 The goal of this project:
 * Several datasets ready to use: MNIST, CIFAR-10, ImageNet-ILSVRC and more.
