@@ -5,7 +5,6 @@ import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils import load_externals
-from nn_robust_attacks import l2_attack#, li_attack, l0_attack
 
 from utils.output import disablePrint, enablePrint
 
@@ -31,13 +30,35 @@ class CarliniModelWrapper:
         """
         return self.model(X)
 
+from keras.models import Model
+from keras.layers import Lambda, Input
 
-from nn_robust_attacks.l2_attack import CarliniL2
-def generate_carlini_l2_examples(sess, model_logits, x, y, X, Y, attack_params, verbose, attack_log_fpath):
+def convert_model(model, input_shape):
+    # Output model: accept [-0.5, 0.5] input range instead of [0,1], output logits instead of softmax.
+    # The output model will have three layers in abstract: Input, Lambda, TrainingModel.
+    model_logits = Model(inputs=model.layers[0].input, outputs=model.layers[-2].output)
+
+    input_tensor = Input(shape=input_shape)
+
+    scaler = lambda x: x+0.5
+    scaler_layer = Lambda(scaler, input_shape=input_shape)(input_tensor)
+    output_tensor = model_logits(scaler_layer)
+
+    model_new = Model(inputs=input_tensor, outputs=output_tensor)
+    return model_new
+
+
+def wrap_to_carlini_model(model, X, Y):
     image_size, num_channels = X.shape[1], X.shape[3]
     num_labels = Y.shape[1]
-
+    model_logits = convert_model(model, input_shape=X.shape[1:])
     model_wrapper = CarliniModelWrapper(model_logits, image_size=image_size, num_channels=num_channels, num_labels=num_labels)
+    return model_wrapper
+
+
+from nn_robust_attacks.l2_attack import CarliniL2
+def generate_carlini_l2_examples(sess, model, x, y, X, Y, attack_params, verbose, attack_log_fpath):
+    model_wrapper = wrap_to_carlini_model(model, X, Y)
 
     accepted_params = ['batch_size', 'confidence', 'targeted', 'learning_rate', 'binary_search_steps', 'max_iterations', 'abort_early', 'initial_const']
     for k in attack_params:
@@ -63,10 +84,7 @@ def generate_carlini_l2_examples(sess, model_logits, x, y, X, Y, attack_params, 
 
 from nn_robust_attacks.li_attack import CarliniLi
 def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params, verbose, attack_log_fpath):
-    image_size, num_channels = X.shape[1], X.shape[3]
-    num_labels = Y.shape[1]
-
-    model_wrapper = CarliniModelWrapper(model_logits, image_size=image_size, num_channels=num_channels, num_labels=num_labels)
+    model_wrapper = wrap_to_carlini_model(model, X, Y)
 
     if 'batch_size' in attack_params:
         batch_size = attack_params['batch_size']
@@ -102,10 +120,7 @@ def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params, 
 
 from nn_robust_attacks.l0_attack import CarliniL0
 def generate_carlini_l0_examples(sess, model_logits, x, y, X, Y, attack_params, verbose, attack_log_fpath):
-    image_size, num_channels = X.shape[1], X.shape[3]
-    num_labels = Y.shape[1]
-
-    model_wrapper = CarliniModelWrapper(model_logits, image_size=image_size, num_channels=num_channels, num_labels=num_labels)
+    model_wrapper = wrap_to_carlini_model(model, X, Y)
 
     if 'batch_size' in attack_params:
         batch_size = attack_params['batch_size']

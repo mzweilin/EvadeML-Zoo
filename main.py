@@ -22,7 +22,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('dataset_name', 'MNIST', 'Supported: MNIST, CIFAR-10, ImageNet.')
 flags.DEFINE_integer('nb_examples', 100, 'The number of examples selected for attacks.')
 flags.DEFINE_boolean('test_mode', False, 'Only select one sample for each class.')
-flags.DEFINE_string('model_name', 'carlini', 'Supported: carlini for MNIST and CIFAR-10; cleverhans and cleverhans_adv_trained for MNIST; ResNet50, VGG19, Inceptionv3 and MobileNet for ImageNet.')
+flags.DEFINE_string('model_name', 'cleverhans', 'Supported: carlini for MNIST and CIFAR-10; cleverhans and cleverhans_adv_trained for MNIST; ResNet50, VGG19, Inceptionv3 and MobileNet for ImageNet.')
 flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000;CarliniL2?targeted=next&batch_size=10&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples for each attack, enabled by default.')
 flags.DEFINE_string('defense', 'feature_squeezing1', 'Supported: feature_squeezing.')
@@ -63,7 +63,7 @@ def main(argv=None):
             img_size = 299
         else:
             img_size = 224
-        X_test_all, Y_test_all = dataset.get_test_data(img_size, 0, 100)
+        X_test_all, Y_test_all = dataset.get_test_data(img_size, 0, 200)
     else:
         X_test_all, Y_test_all = dataset.get_test_dataset()
 
@@ -82,18 +82,8 @@ def main(argv=None):
           2. "model_carlini" for Carlini/Wagner's attacks.
         The scaling argument, 'input_range_type': {1: [0,1], 2:[-0.5, 0.5], 3:[-1, 1]...}
         """
-
-        # With median_filter.
-        from utils.median import median_filter
-        pre_filter = lambda x:median_filter(x, 3, 3)
-        model_median = dataset.load_model_by_name(FLAGS.model_name, logits=False, input_range_type=1, pre_filter=pre_filter)
-
         model = dataset.load_model_by_name(FLAGS.model_name, logits=False, input_range_type=1)
         model.compile(loss='categorical_crossentropy',optimizer='sgd', metrics=['acc'])
-
-        # Carlini/Wagner's attack implementations require the input range [-0.5, 0.5].
-        model_carlini = dataset.load_model_by_name(FLAGS.model_name, logits=True, input_range_type=2, pre_filter=pre_filter)
-        model_carlini.compile(loss='categorical_crossentropy',optimizer='sgd', metrics=['acc'])
 
 
     # 3. Evaluate the trained model.
@@ -196,17 +186,11 @@ def main(argv=None):
         Diffrentiable layers: embeded into the target model. (Try if we can dynamically insert the filter layer to a Keras model.)
         Non-diffrentialble layers: a separated model for testing. Iteratively, adding gaussian noise to the seed examples.
         """
-        if 'carlini' in attack_name:
-            target_model = model_carlini
-        else:
-            target_model = model
-
-        # target_model = model_median
 
         x_adv_fname = "%s_%s.pickle" % (task_id, attack_string)
         x_adv_fpath = os.path.join(X_adv_cache_folder, x_adv_fname)
 
-        X_test_adv, aux_info = maybe_generate_adv_examples(sess, target_model, x, y, X_test, Y_test_target, attack_name, attack_params, use_cache = x_adv_fpath, verbose=FLAGS.verbose, attack_log_fpath=attack_log_fpath)
+        X_test_adv, aux_info = maybe_generate_adv_examples(sess, model, x, y, X_test, Y_test_target, attack_name, attack_params, use_cache = x_adv_fpath, verbose=FLAGS.verbose, attack_log_fpath=attack_log_fpath)
         X_test_adv_list.append(X_test_adv)
 
         if isinstance(aux_info, float):
