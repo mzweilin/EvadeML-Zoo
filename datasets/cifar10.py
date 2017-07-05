@@ -43,7 +43,7 @@ class CIFAR10Dataset:
             model = carlini_cifar10_model(logits=logits, input_range_type=input_range_type, pre_filter=pre_filter)
         print("\n===Defined TensorFlow model graph.")
         model.load_weights(model_weights_fpath)
-        print ("---Loaded MNIST-%s model.\n" % model_name)
+        print ("---Loaded CIFAR-10-%s model.\n" % model_name)
         return model
 
 if __name__ == '__main__':
