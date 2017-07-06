@@ -10,5 +10,5 @@
 | CarliniL2 | nn_robust_attack  |    batch_size=1&confidence=0&learning_rate=0.01& binary_search_steps=9&max_iterations=10000& abort_early=true&initial_const=0.001 |
 | CarliniLi | nn_robust_attack  |  ? |
 | CarliniL0 | nn_robust_attack  |  ? |
-| DeepFool          |  ?                  |? |
+| DeepFool          |  Universal          |? |
 
