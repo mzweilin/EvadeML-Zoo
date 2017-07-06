@@ -259,29 +259,14 @@ def main(argv=None):
     del X_test_adv_list
 
     if FLAGS.detection == 'feature_squeezing':
-        from utils.detection import get_balanced_detection_dataset, get_train_test_idx, evalulate_detection_test
+        from utils.detection import evalulate_detection_test, get_detection_train_test_set
 
         # 7.1 Prepare the dataset for detection.
-        """
-        Get the index of failed adversarial examples, and the respective attack method.
-            In this way, we can know if the false negatives are failed adversarial examples.
-
-        """
-
-        X_detect, Y_detect, failed_adv_idx = get_balanced_detection_dataset(X_test_all, Y_test, X_test_adv_discretized_list, predict_func=model.predict)
-        print ("Positive ratio in detection dataset %d/%d" % (np.sum(Y_detect), len(Y_detect)))
-
-        train_ratio = 0.5
-        train_idx, test_idx = get_train_test_idx(train_ratio, len(Y_detect))
-
-        X_detect_train, Y_detect_train = X_detect[train_idx], Y_detect[train_idx]
-        X_detect_test, Y_detect_test = X_detect[test_idx], Y_detect[test_idx]
-
-        print ("Positive ratio in train %d/%d" % (np.sum(Y_detect_train), len(Y_detect_train)))
-        print ("Positive ratio in test %d/%d" % (np.sum(Y_detect_test), len(Y_detect_test)))
+        X_detect_train, Y_detect_train, X_detect_test, Y_detect_test, test_idx = \
+                    get_detection_train_test_set(X_test_all, Y_test, X_test_adv_discretized_list, predict_func=model.predict)
 
         # 7.2 Enumerate all specified detection methods.
-        # Feature Squeezing as an example.
+        # Take Feature Squeezing as an example.
 
         csv_fname = "%s_attacks_%s_detection_two_filters_%s_raw_adv.csv" % (task_id, attack_string_hash, FLAGS.detection)
         detection_csv_fpath = os.path.join(FLAGS.result_folder, csv_fname)
@@ -311,10 +296,10 @@ def main(argv=None):
             threshold = fsd.train(X_detect_train, Y_detect_train)
             Y_detect_pred, distances = fsd.test(X_detect_test)
 
+            accuracy, tpr, fpr = evalulate_detection_test(Y_detect_test, Y_detect_pred)
             fprs, tprs, thresholds = roc_curve(Y_detect_test, distances)
             roc_auc = auc(fprs, tprs)
 
-            accuracy, tpr, fpr = evalulate_detection_test(Y_detect_test, Y_detect_pred)
             print ("ROC-AUC: %.2f, Accuracy: %.2f, TPR: %.2f, FPR: %.2f, Threshold: %.2f." % (roc_auc, accuracy, tpr, fpr, threshold))
 
             ret = {}

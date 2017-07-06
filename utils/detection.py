@@ -71,3 +71,21 @@ def evalulate_detection_test(Y_detect_test, Y_detect_pred):
     tpr, fpr = get_tpr_fpr(Y_detect_test, Y_detect_pred)
     return accuracy, tpr, fpr
 
+def get_detection_train_test_set(X_test_all, Y_test, X_test_adv_discretized_list, predict_func, train_ratio = 0.5):
+    """
+    Get the index of failed adversarial examples, and the respective attack method.
+        In this way, we can know if the false negatives are failed adversarial examples.
+
+    """
+    X_detect, Y_detect, failed_adv_idx = get_balanced_detection_dataset(X_test_all, Y_test, X_test_adv_discretized_list, predict_func=model.predict)
+    print ("Positive ratio in detection dataset %d/%d" % (np.sum(Y_detect), len(Y_detect)))
+
+    train_idx, test_idx = get_train_test_idx(train_ratio, len(Y_detect))
+
+    X_detect_train, Y_detect_train = X_detect[train_idx], Y_detect[train_idx]
+    X_detect_test, Y_detect_test = X_detect[test_idx], Y_detect[test_idx]
+
+    print ("Positive ratio in train %d/%d" % (np.sum(Y_detect_train), len(Y_detect_train)))
+    print ("Positive ratio in test %d/%d" % (np.sum(Y_detect_test), len(Y_detect_test)))
+
+    return X_detect_train, Y_detect_train, X_detect_test, Y_detect_test, test_idx
