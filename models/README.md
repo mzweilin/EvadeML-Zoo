@@ -9,10 +9,10 @@
 
 ## Dataset: CIFAR-10
 
-|      Model Name     | Architecture  | Testing Accuracy |  Mean Confidence |
-|---------------------|---------------|------------------|------------------|
-| Carlini             |               |     0.7796       |  0.7728          |
-| DenseNet            | (L=40,k=12)   |     0.93         |  ?               |
+|      Model Name     | Architecture  |  Parameters      | Testing Accuracy |  Mean Confidence |
+|---------------------|---------------|------------------|------------------|------------------|
+| Carlini             |               |                  |     0.7796       |  0.7728          |
+| DenseNet            |               | (L=40,k=12)      |     0.93         |  ?               |
 
 
 ## Dataset: Imagenet-ILSVRC
