@@ -35,7 +35,7 @@ class CIFAR10Dataset:
         self.model_name = model_name
 
         model_weights_fpath = "%s_%s.keras_weights.h5" % (self.dataset_name, model_name)
-        model_weights_fpath = os.path.join('trained_models', model_weights_fpath)
+        model_weights_fpath = os.path.join('models/trained_weights', model_weights_fpath)
 
         if model_name in ["cleverhans", 'cleverhans_adv_trained']:
             model = cleverhans_cifar10_model(logits=logits, input_range_type=input_range_type, pre_filter=pre_filter)
