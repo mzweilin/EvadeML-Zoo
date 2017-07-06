@@ -220,16 +220,13 @@ class FeatureSqueezingDetector:
         selected_distance_idx = int(np.ceil(len(X_neg) * tnr))
         threshold = sorted(distances)[selected_distance_idx-1]
         self.threshold = threshold
+        return threshold
 
-    def test(self, X, Y):
+    def test(self, X):
         layer_id, normalizer_name, metric_name, squeezers_name = self.get_config()
 
         distances = self.get_distance(X)
-
-        fprs, tprs, thresholds = roc_curve(Y, distances)
-        roc_auc = auc(fprs, tprs)
-
         threshold = self.threshold
         Y_pred = distances > threshold
 
-        return Y_pred, roc_auc, threshold
+        return Y_pred, distances

@@ -266,11 +266,7 @@ def main(argv=None):
         Get the index of failed adversarial examples, and the respective attack method.
             In this way, we can know if the false negatives are failed adversarial examples.
 
-        Failed adversarial examples: 
-            should count as negative in TPR
-            should count as positive in FPR
         """
-
 
         X_detect, Y_detect, failed_adv_idx = get_balanced_detection_dataset(X_test_all, Y_test, X_test_adv_discretized_list, predict_func=model.predict)
         print ("Positive ratio in detection dataset %d/%d" % (np.sum(Y_detect), len(Y_detect)))
@@ -292,6 +288,7 @@ def main(argv=None):
         to_csv = []
 
         from defenses.feature_squeezing.detection import FeatureSqueezingDetector
+        from sklearn.metrics import roc_curve, auc
         fsd = FeatureSqueezingDetector(model, task_id, attack_string_hash)
 
         # TODO: Automatically get the suitable squeezers through robustness test with legitimate examples.
@@ -300,11 +297,9 @@ def main(argv=None):
         if FLAGS.dataset_name == "MNIST":
             squeezers_name = ['median_smoothing_2', 'median_smoothing_3', 'binary_filter']
         elif FLAGS.dataset_name == "CIFAR-10":
-            # Squeezers for CIFAR-10 and ImageNet
             squeezers_name = ["bit_depth_6", 'median_smoothing_1_2', 'median_smoothing_2_1','median_smoothing_2']
         elif FLAGS.dataset_name == "ImageNet":
             squeezers_name = ["bit_depth_5", 'median_smoothing_1_2', 'median_smoothing_2_1','median_smoothing_2']
-
 
         # best_metrics = fsd.view_adv_propagation(X_test, X_test_adv_list[0], squeezers_name)
         best_metrics = [[len(model.layers)-1, 'none', 'kl_f']]
@@ -312,8 +307,13 @@ def main(argv=None):
         for layer_id, normalizer_name, metric_name in best_metrics:
             fsd.set_config(layer_id, normalizer_name, metric_name, squeezers_name)
             print ("===Detection config: Layer-%d, Metric-%s, Norm-%s" % (layer_id, metric_name, normalizer_name))
-            fsd.train(X_detect_train, Y_detect_train)
-            Y_detect_pred, roc_auc, threshold = fsd.test(X_detect_test, Y_detect_test)
+
+            threshold = fsd.train(X_detect_train, Y_detect_train)
+            Y_detect_pred, distances = fsd.test(X_detect_test)
+
+            fprs, tprs, thresholds = roc_curve(Y_detect_test, distances)
+            roc_auc = auc(fprs, tprs)
+
             accuracy, tpr, fpr = evalulate_detection_test(Y_detect_test, Y_detect_pred)
             print ("ROC-AUC: %.2f, Accuracy: %.2f, TPR: %.2f, FPR: %.2f, Threshold: %.2f." % (roc_auc, accuracy, tpr, fpr, threshold))
 
