@@ -15,10 +15,8 @@ import tensorflow as tf
 from tensorflow.python.platform import app
 from tensorflow.python.platform import flags
 
-
 FLAGS = flags.FLAGS
 
-# Arguments for task scheduling
 flags.DEFINE_string('dataset_name', 'MNIST', 'Supported: MNIST, CIFAR-10, ImageNet.')
 flags.DEFINE_integer('nb_examples', 100, 'The number of examples selected for attacks.')
 flags.DEFINE_boolean('test_mode', False, 'Only select one sample for each class.')
@@ -77,9 +75,7 @@ def main(argv=None):
 
     with tf.variable_scope(FLAGS.model_name):
         """
-        Create two model instances with the same weights. 
-          1. "model" for prediction;
-          2. "model_carlini" for Carlini/Wagner's attacks.
+        Create a model instance for prediction.
         The scaling argument, 'input_range_type': {1: [0,1], 2:[-0.5, 0.5], 3:[-1, 1]...}
         """
         model = dataset.load_model_by_name(FLAGS.model_name, logits=False, input_range_type=1)
@@ -90,7 +86,6 @@ def main(argv=None):
     # TODO: add top-5 accuracy for ImageNet.
     Y_pred_all = model.predict(X_test_all)
     mean_conf_all = calculate_mean_confidence(Y_pred_all, Y_test_all)
-    # _, accuracy_all = model.evaluate(X_test_all, Y_test_all, batch_size=128)
     accuracy_all = calculate_accuracy(Y_pred_all, Y_test_all)
     print('Test accuracy on raw legitimate examples %.4f' % (accuracy_all))
     print('Mean confidence on ground truth classes %.4f' % (mean_conf_all))
@@ -178,14 +173,7 @@ def main(argv=None):
         else:
             targeted = False
             attack_params['targeted'] = False
-            # TODO: only adding the param for Carlini's attacks.
             Y_test_target = Y_test
-
-        # TODO: Add support to defense-aware attacks. (adaptive adversary.)
-        """
-        Diffrentiable layers: embeded into the target model. (Try if we can dynamically insert the filter layer to a Keras model.)
-        Non-diffrentialble layers: a separated model for testing. Iteratively, adding gaussian noise to the seed examples.
-        """
 
         x_adv_fname = "%s_%s.pickle" % (task_id, attack_string)
         x_adv_fpath = os.path.join(X_adv_cache_folder, x_adv_fname)
@@ -233,18 +221,6 @@ def main(argv=None):
     fieldnames = ['dataset_name', 'model_name', 'attack_string', 'duration_per_sample', 'discretization', 'success_rate', 'mean_confidence', 'mean_l2_dist', 'mean_li_dist', 'mean_l0_dist_value', 'mean_l0_dist_pixel']
     write_to_csv(to_csv, attacks_evaluation_csv_fpath, fieldnames)
 
-    # Visualize the propagation of perturbations.
-    # Scenerio 1: Assume we have a perfect squeezer that always recover adversarial example to legitimate. The distance of legitimate is zero.
-    # Scenerio 2: Use one(or several) feature squeezer(s) that barely affect the legitimate example. The distance of legitimate may be positive.
-    # from defenses.feature_squeezing.propagation import view_propagation
-    # view_propagation(X_test, X_test_adv_list[0], model, 'adv')
-
-    # from defenses.feature_squeezing.squeeze import median_filter_np
-    # squeezers = [lambda x: median_filter_np(x, 3)]
-    # view_propagation(X_test, X_test_adv_list[0], model, 'adv_leg', )
-
-
-
 
     if FLAGS.visualize is True:
         from datasets.visualization import show_imgs_in_rows
@@ -254,17 +230,7 @@ def main(argv=None):
         rows = [legitimate_examples]
         rows += map(lambda x:x[selected_idx_vis], X_test_adv_list)
 
-        from defenses.feature_squeezing.squeeze import median_filter_np
-        from defenses.feature_squeezing.squeeze import otsu_binarize, adaptive_binarize
-        if len(X_test_adv_list) == 1:
-            rows += [median_filter_np(X_test_adv_list[0][selected_idx_vis], 2, 2)]
-            rows += [median_filter_np(X_test_adv_list[0][selected_idx_vis], 3, 3)]
-            # otsu_binarize, adaptive_binarize
-            # rows += [otsu_binarize(X_test_adv_list[0][selected_idx_vis])]
-            # rows += [adaptive_binarize(X_test_adv_list[0][selected_idx_vis])]
-
         img_fpath = os.path.join(FLAGS.result_folder, '%s_attacks_%s_examples.png' % (task_id, attack_string_hash) )
-        # pdb.set_trace()
         show_imgs_in_rows(rows, img_fpath)
         print ('\n===Adversarial image examples are saved in ', img_fpath)
 
@@ -291,7 +257,6 @@ def main(argv=None):
     # All data should be discretized to uint8.
     X_test_adv_discretized_list = [ reduce_precision_np(X_test_adv, 256) for X_test_adv in X_test_adv_list]
     del X_test_adv_list
-    # X_test_adv_discretized_list = X_test_adv_list
 
     if FLAGS.detection == 'feature_squeezing':
         from utils.detection import get_balanced_detection_dataset, get_train_test_idx, evalulate_detection_test
@@ -374,11 +339,6 @@ def main(argv=None):
             tp_idx_Y_test = np.array(test_idx)[tp_idx]
             nb_failed_as_positive = len(tp_idx_Y_test) - len(set(tp_idx_Y_test) - set(failed_adv_idx))
             print ("%d/%d failed adv. examples in true positives." % (nb_failed_as_positive, len(tp_idx_Y_test)))
-
-
-
-            # index of false positives
-            # fp_idx = np.where((Y_detect_test == False) & (Y_detect_pred == True))
 
             ret['layer_id'] = layer_id
             ret['normalizer'] = normalizer_name
