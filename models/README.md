@@ -15,7 +15,7 @@
 | DenseNet            |               | (L=40,k=12)      |     0.93         |  ?               |
 
 
-## Dataset: Imagenet (ILSVRC)
+## Dataset: ImageNet (ILSVRC)
 
 | Model Name | Architecture  | Top-1 Accuracy   |  Top-5 Accuracy |
 |------------|---------------|------------------|-----------------|
