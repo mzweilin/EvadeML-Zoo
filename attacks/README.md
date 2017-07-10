@@ -30,12 +30,16 @@
 
 
 ### DeepFool
+
+* num_classes: limits the number of classes to test against.
+* overshoot: used as a termination criterion to prevent vanishing updates 
+* max_iter: maximum number of iterations for deepfool
+
 |       Parameter       |  DeepFool   |  Universal Adversarial Perturbations |
 |-----------------------|-------------|--------------------------------------|
 |    num_classes        |  10         |             ?                        |
 |    overshoot          | 0.02        |             ?                        |
 |    max_iter           |  50         |             ?                        |
-
 
 
 
