@@ -1,6 +1,8 @@
 # Attack Algorithms
 
-## Default Parameters in Cleverhans Attacks
+## Default Parameters
+
+### Cleverhans Attacks
 |  Parameter |  FGSM   |  BIM   | JSMA |
 |------------|---------|--------|------|
 |    eps     |  0.1    |   0.1  |- |
@@ -10,7 +12,7 @@
 |   gamma    |   -   |   -  | 0.1  |
 
 
-## Default Parameters in C/W attacks
+### C/W attacks
 |       Parameter       | C/W L2   |  C/W Li   | C/W L0 |
 |-----------------------|----------|-----------|--------|
 | batch_size            |   1    |    -    |   -  |
@@ -27,7 +29,7 @@
 | independent_channels  |   -    |    -    |   false  |
 
 
-## Default Parameters in DeepFool
+### DeepFool
 |       Parameter       |  DeepFool   |  Universal Adversarial Perturbations |
 |-----------------------|-------------|--------------------------------------|
 |    num_classes        |  10         |             ?                        |
