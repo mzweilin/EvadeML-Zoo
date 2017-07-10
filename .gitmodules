@@ -13,3 +13,6 @@
 [submodule "externals/universal"]
 	path = externals/universal
 	url = https://github.com/LTS4/universal.git
+[submodule "externals/titu1994/DenseNet"]
+	path = externals/titu1994/DenseNet
+	url = https://github.com/titu1994/DenseNet.git

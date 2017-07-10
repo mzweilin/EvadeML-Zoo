@@ -4,7 +4,8 @@ external_libs = {'Cleverhans': "externals/cleverhans",
                  "Carlini_nn_robust_attacks": "externals/carlini",
                  "Keras-deep-learning-models": "externals/keras_models",
                  "MobileNets": "externals/MobileNetworks",
-                 "Deepfool/Universal": "externals/universal/python"
+                 "Deepfool/Universal": "externals/universal/python",
+                 "DenseNet": "externals/titu1994/DenseNet",
                  }
 
 project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -32,6 +33,11 @@ for lib_name, lib_path in external_libs.items():
             open(lib_token_fpath, 'a').close()
 
     if lib_name == 'Deepfool/Universal':
+        lib_token_fpath = os.path.join(lib_path, '__init__.py')
+        if not os.path.isfile(lib_token_fpath):
+            open(lib_token_fpath, 'a').close()
+
+    if lib_name == 'DenseNet':
         lib_token_fpath = os.path.join(lib_path, '__init__.py')
         if not os.path.isfile(lib_token_fpath):
             open(lib_token_fpath, 'a').close()
