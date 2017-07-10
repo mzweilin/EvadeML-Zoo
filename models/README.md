@@ -1,5 +1,7 @@
 # Pre-trained Models
 
+> *Note*: Make sure the last layer in Keras model definition is the Softmax activation layer, *i.e.* model.layers[-2].output is the logits and model.layers[-1].output is the softmax activation, because some attack algorithms require the logits output.
+
 ## Dataset: MNIST
 
 | Model Name | Architecture  | Testing Accuracy |  Mean Confidence |
