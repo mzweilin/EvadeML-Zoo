@@ -1,6 +1,6 @@
 # Attack Algorithms
 
-## Default Parameters of Attacks from Cleverhans
+## Default Parameters in Cleverhans Attacks
 |  Parameter |  FGSM   |  BIM   | JSMA |
 |------------|---------|--------|------|
 |    eps     |  0.1    |   0.1  |- |
@@ -10,7 +10,7 @@
 |   gamma    |   -   |   -  | 0.1  |
 
 
-## Default Parameters of Attacks from C/W's nn_robust_attacks
+## Default Parameters in C/W attacks
 |       Parameter       | C/W L2   |  C/W Li   | C/W L0 |
 |-----------------------|----------|-----------|--------|
 | batch_size            |   1    |    -    |   -  |
