@@ -26,6 +26,17 @@
 | const_factor          |   -    |    2.0    |   2.0  |
 | independent_channels  |   -    |    -    |   false  |
 
+
+## Default Parameters in DeepFool
+|       Parameter       |  DeepFool   |  Universal Adversarial Perturbations |
+|-----------------------|-------------|--------------------------------------|
+|    num_classes        |  10         |             ?                        |
+|    overshoot          | 0.02        |             ?                        |
+|    max_iter           |  50         |             ?                        |
+
+
+
+
 |     Method        |      Source       |          Default Parameters             |
 |-------------------|-------------------|-----------------------------------------|
 |      FGSM         | Cleverhans        |     eps=0.1                                    |
