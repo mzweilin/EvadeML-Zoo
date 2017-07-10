@@ -12,7 +12,7 @@
 |      Model Name     | Architecture  |  Parameters      | Testing Accuracy |  Mean Confidence |
 |---------------------|---------------|------------------|------------------|------------------|
 | Carlini             |               |                  |     0.7796       |  0.7728          |
-| DenseNet            |               | (L=40,k=12)      |     0.93         |  ?               |
+| DenseNet            |               | (L=40,k=12)      |     0.9484         |  ?               |
 
 
 ## Dataset: ImageNet (ILSVRC)
