@@ -83,7 +83,7 @@ def generate_carlini_l2_examples(sess, model, x, y, X, Y, attack_params, verbose
 
 
 from nn_robust_attacks.li_attack import CarliniLi
-def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params, verbose, attack_log_fpath):
+def generate_carlini_li_examples(sess, model, x, y, X, Y, attack_params, verbose, attack_log_fpath):
     model_wrapper = wrap_to_carlini_model(model, X, Y)
 
     if 'batch_size' in attack_params:
@@ -119,7 +119,7 @@ def generate_carlini_li_examples(sess, model_logits, x, y, X, Y, attack_params, 
 
 
 from nn_robust_attacks.l0_attack import CarliniL0
-def generate_carlini_l0_examples(sess, model_logits, x, y, X, Y, attack_params, verbose, attack_log_fpath):
+def generate_carlini_l0_examples(sess, model, x, y, X, Y, attack_params, verbose, attack_log_fpath):
     model_wrapper = wrap_to_carlini_model(model, X, Y)
 
     if 'batch_size' in attack_params:
