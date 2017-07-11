@@ -42,9 +42,25 @@
 * overshoot: used as a termination criterion to prevent vanishing updates 
 * max_iter: maximum number of iterations for deepfool
 
+### Universal Adversarial Perturbations
+
+* delta: controls the desired fooling rate (default = 80% fooling rate)
+* max_iter_uni: optional other termination criterion (maximum number of iteration, default = np.inf)
+* xi: controls the l_p magnitude of the perturbation (default = 10)
+* p: norm to be used (FOR NOW, ONLY p = 2, and p = np.inf ARE ACCEPTED!) (default = np.inf)
+* num_classes: num_classes (limits the number of classes to test against, by default = 10)
+* overshoot: used as a termination criterion to prevent vanishing updates (default = 0.02).
+* max_iter_df: maximum number of iterations for deepfool (default = 10)
+
 |       Parameter       |  DeepFool   |  Universal Adversarial Perturbations |
 |-----------------------|-------------|--------------------------------------|
-|    num_classes        |  10         |             ?                        |
-|    overshoot          | 0.02        |             ?                        |
-|    max_iter           |  50         |             ?                        |
+|    num_classes        |  10         |             10                       |
+|    overshoot          |  0.02       |             0.02                     |
+|    max_iter           |  50         |             -                        |
+|    max_iter_df        |  -          |             10                       |
+|    max_iter_uni       |  -          |             np.inf                   |
+|    delta              |  -          |             0.2                      |
+|    xi                 |  -          |             10                       |
+|    p                  |  -          |             np.inf                   |
+
 
