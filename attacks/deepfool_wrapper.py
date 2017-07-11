@@ -4,8 +4,10 @@ from keras.models import Model
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.output import disablePrint, enablePrint
 from utils import load_externals
 from deepfool import deepfool
+from universal_pert import universal_perturbation
 
 import warnings
 import click
@@ -21,10 +23,8 @@ def override_params(default, update):
         warnings.warn("Ignored arguments: %s" % update.keys())
     return default
 
-def generate_deepfool_examples(sess, model, x, y, X, Y, attack_params, verbose, attack_log_fpath):
-    """
-    Untargeted attack. Y is not needed.
-    """
+
+def prepare_attack(sess, model, x, y, X, Y):
     nb_classes = Y.shape[1]
 
     f = model.predict
@@ -41,6 +41,16 @@ def generate_deepfool_examples(sess, model, x, y, X, Y, attack_params, verbose, 
     print('>> Computing gradient function...')
     def grad_fs(image_inp, inds): return [sess.run(dydx[i], feed_dict={persisted_input: image_inp}) for i in inds]
 
+    return f, grad_fs
+
+def generate_deepfool_examples(sess, model, x, y, X, Y, attack_params, verbose, attack_log_fpath):
+    """
+    Untargeted attack. Y is not needed.
+    """
+
+    # TODO: insert a uint8 filter to f.
+    f, grad_fs = prepare_attack(sess, model, x, y, X, Y)
+
     params = {'num_classes': 10, 'overshoot': 0.02, 'max_iter': 50}
     params = override_params(params, attack_params)
 
@@ -56,7 +66,15 @@ def generate_deepfool_examples(sess, model, x, y, X, Y, attack_params, verbose, 
         # Loop over the samples we want to perturb into adversarial examples
         for i in bar:
             image = X[i:i+1,:,:,:]
+
+            if not verbose:
+                disablePrint(attack_log_fpath)
+
             r_tot, loop_i, k_i, pert_image = deepfool(image, f, grad_fs, **params)
+
+            if not verbose:
+                enablePrint()
+
             adv_x_list.append(pert_image)
 
             aux_info['r_tot'].append(r_tot)
@@ -64,3 +82,33 @@ def generate_deepfool_examples(sess, model, x, y, X, Y, attack_params, verbose, 
             aux_info['k_i'].append(k_i)
 
     return np.vstack(adv_x_list), aux_info
+
+
+def generate_universal_perturbation_examples(sess, model, x, y, X, Y, attack_params, verbose, attack_log_fpath):
+    """
+    Untargeted attack. Y is not needed.
+    """
+
+    # TODO: insert a uint8 filter to f.
+    f, grad_fs = prepare_attack(sess, model, x, y, X, Y)
+
+    params = {'delta': 0.2,
+              'max_iter_uni': np.inf,
+              'xi': 10,
+              'p': np.inf,
+              'num_classes': 10,
+              'overshoot': 0.02,
+              'max_iter_df': 10,
+              }
+
+    params = override_params(params, attack_params)
+
+    if not verbose:
+        disablePrint(attack_log_fpath)
+
+    v = universal_perturbation(X, f, grad_fs, **params)
+
+    if not verbose:
+        enablePrint()
+
+    return X + v
