@@ -46,7 +46,7 @@ Example: `python --attacks "deepfool?overshoot=9&max_iter=50"`
 
 ### Universal Adversarial Perturbations
 
-* delta: controls the desired fooling rate (default = 80% fooling rate)
+* delta: controls the desired fooling rate (default = 80% fooling rate when delta == 0.2)
 * max_iter_uni: optional other termination criterion (maximum number of iteration, default = np.inf)
 * xi: controls the l_p magnitude of the perturbation (default = 10)
 * p: norm to be used (FOR NOW, ONLY p = 2, and p = np.inf ARE ACCEPTED!) (default = np.inf)
