@@ -42,6 +42,8 @@
 * overshoot: used as a termination criterion to prevent vanishing updates 
 * max_iter: maximum number of iterations for deepfool
 
+Example: `python --attacks "deepfool?overshoot=9&max_iter=50"`
+
 ### Universal Adversarial Perturbations
 
 * delta: controls the desired fooling rate (default = 80% fooling rate)
@@ -51,6 +53,8 @@
 * num_classes: num_classes (limits the number of classes to test against, by default = 10)
 * overshoot: used as a termination criterion to prevent vanishing updates (default = 0.02).
 * max_iter_df: maximum number of iterations for deepfool (default = 10)
+
+Example: `python --attacks "unipert?overshoot=9&max_iter_df=50"`
 
 |       Parameter       |  DeepFool   |  Universal Adversarial Perturbations |
 |-----------------------|-------------|--------------------------------------|
