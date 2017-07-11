@@ -106,7 +106,10 @@ def generate_universal_perturbation_examples(sess, model, x, y, X, Y, attack_par
     if not verbose:
         disablePrint(attack_log_fpath)
 
-    v = universal_perturbation(X, f, grad_fs, **params)
+    # X is randomly shuffled in unipert.
+    X_copy = X.copy()
+    v = universal_perturbation(X_copy, f, grad_fs, **params)
+    del X_copy
 
     if not verbose:
         enablePrint()
