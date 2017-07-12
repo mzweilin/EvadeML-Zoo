@@ -55,6 +55,9 @@ class ImageNetDataset:
         self.num_classes = 1000
         self.img_folder = "/tmp/ILSVRC2012_img_val_labeled_caffe"
 
+        if not os.path.isdir:
+            raise Exception("Please prepare the ImageNet dataset first: EvadeML-Zoo/datasets/imagenet_dataset/label_as_filename.py.")
+
     def get_test_dataset(self, img_size=224, num_images=100):
         self.image_size = img_size
         X, Y = data_imagenet(self.img_folder, self.image_size, selected_idx=num_images)
