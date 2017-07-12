@@ -73,9 +73,7 @@ def calculate_mean_distance(X1, X2):
     return mean_l2_dist, mean_li_dist, mean_l0_dist_value, mean_l0_dist_pixel
 
 
-def evaluate_adversarial_examples(X_test, X_test_adv, Y_test_target, targeted, model_predict):
-    Y_test_adv_pred = model_predict(X_test_adv)
-
+def evaluate_adversarial_examples(X_test, X_test_adv, Y_test_target, targeted, Y_test_adv_pred):
     success_rate = calculate_accuracy(Y_test_adv_pred, Y_test_target)
     # TODO: calculate the mean confidence of the successful adversarial examples.
     mean_conf = calculate_mean_confidence(Y_test_adv_pred, Y_test_target)

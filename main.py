@@ -156,9 +156,13 @@ def main(argv=None):
 
     X_adv_cache_folder = os.path.join(FLAGS.result_folder, 'adv_examples')
     adv_log_folder = os.path.join(FLAGS.result_folder, 'adv_logs')
-    for folder in [X_adv_cache_folder, adv_log_folder]:
+    predictions_folder = os.path.join(FLAGS.result_folder, 'predictions')
+    for folder in [X_adv_cache_folder, adv_log_folder, predictions_folder]:
         if not os.path.isdir(folder):
             os.makedirs(folder)
+
+    predictions_fpath = os.path.join(predictions_folder, "legitimate.npy")
+    np.save(predictions_fpath, Y_pred, allow_pickle=False)
 
     for attack_string in attack_string_list:
         attack_log_fpath = os.path.join(adv_log_folder, "%s_%s.log" % (task_id, attack_string))
@@ -190,11 +194,15 @@ def main(argv=None):
 
         dur_per_sample = duration / len(X_test_adv)
 
+        # 5.0 Output predictions.
+        Y_test_adv_pred = model.predict(X_test_adv)
+        predictions_fpath = os.path.join(predictions_folder, "%s.npy"% attack_string)
+        np.save(predictions_fpath, Y_test_adv_pred, allow_pickle=False)
+
         # 5.1. Evaluate the quality of adversarial examples
-        model_predict = lambda x: model.predict(x)
 
         print ("\n---Attack: %s" % attack_string)
-        rec = evaluate_adversarial_examples(X_test, X_test_adv, Y_test_target.copy(), targeted, model_predict)
+        rec = evaluate_adversarial_examples(X_test, X_test_adv, Y_test_target.copy(), targeted, Y_test_adv_pred)
         print ("Duration per sample: %.1fs" % dur_per_sample)
         rec['dataset_name'] = FLAGS.dataset_name
         rec['model_name'] = FLAGS.model_name
@@ -206,7 +214,8 @@ def main(argv=None):
         # 5.2 Adversarial examples being discretized to uint8.
         print ("\n---Attack (uint8): %s" % attack_string)
         X_test_adv_discret = reduce_precision_np(X_test_adv, 256)
-        rec = evaluate_adversarial_examples(X_test, X_test_adv_discret, Y_test_target.copy(), targeted, model_predict)
+        Y_test_adv_discret_pred = model.predict(X_test_adv_discret)
+        rec = evaluate_adversarial_examples(X_test, X_test_adv_discret, Y_test_target.copy(), targeted, Y_test_adv_discret_pred)
         rec['dataset_name'] = FLAGS.dataset_name
         rec['model_name'] = FLAGS.model_name
         rec['attack_string'] = attack_string
