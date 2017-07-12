@@ -8,6 +8,56 @@ from utils.output import write_to_csv
 
 import functools, operator
 
+
+def calculate_squeezed_accuracy_new(model, Y_test, X_test, attack_string_list, X_test_adv_list, csv_fpath):
+    # Median filter window sizes.
+    width_height_list = [[1,1]]
+
+    width_height_list += [ [1, i] for i in range(2,6)]
+    width_height_list += [ [i, 1] for i in range(2,6)]
+    width_height_list += [ [i, i] for i in range(2,6)]
+
+    to_csv_list = []
+
+    for width, height in width_height_list:
+        print ("Median: %d-%d" % (width, height))
+        record = {}
+        record['width'] = width
+        record['height'] = height
+        X_squeezed = median_filter_np(X_test, width, height)
+        _,accuracy_leg = model.evaluate(X_squeezed, Y_test)
+        record['accuracy_leg'] = accuracy_leg
+
+        for i, attack_string in enumerate(attack_string_list):
+            X_adv_squeezed = median_filter_np(X_test_adv_list[i], width, height)
+            _,accuracy_adv = model.evaluate(X_adv_squeezed, Y_test)
+            record[attack_string] = accuracy_adv
+        record['npp'] = None
+        to_csv_list.append(record)
+
+    # npp list.
+    for npp in [256, 128, 64, 32, 16, 8, 4, 2]:
+        print ("Color npp: %d" % (npp))
+        record = {}
+        record['npp'] = npp
+        X_squeezed = reduce_precision_np(X_test, npp)
+        _,accuracy_leg = model.evaluate(X_squeezed, Y_test)
+        record['accuracy_leg'] = accuracy_leg
+
+        for i, attack_string in enumerate(attack_string_list):
+            X_adv_squeezed = reduce_precision_np(X_test_adv_list[i], npp)
+            _,accuracy_adv = model.evaluate(X_adv_squeezed, Y_test)
+            record[attack_string] = accuracy_adv
+        record['width'] = record['height'] = None
+        to_csv_list.append(record)
+
+    field_names = ['width', 'height', 'npp', 'accuracy_leg'] + attack_string_list
+    write_to_csv(to_csv_list, csv_fpath, field_names)
+
+
+
+
+
 def calculate_squeezed_accuracy(model, Y, X, X_adv, output_csv_fpath):
     to_csv_1 = calculate_median_smoothed_accuracy(model, Y, X, X_adv)
     to_csv_2 = calculate_color_depth_reduced_accuracy(model, Y, X, X_adv)

@@ -77,7 +77,7 @@ def get_detection_train_test_set(X_test_all, Y_test, X_test_adv_discretized_list
         In this way, we can know if the false negatives are failed adversarial examples.
 
     """
-    X_detect, Y_detect, failed_adv_idx = get_balanced_detection_dataset(X_test_all, Y_test, X_test_adv_discretized_list, predict_func=model.predict)
+    X_detect, Y_detect, failed_adv_idx = get_balanced_detection_dataset(X_test_all, Y_test, X_test_adv_discretized_list, predict_func=predict_func)
     print ("Positive ratio in detection dataset %d/%d" % (np.sum(Y_detect), len(Y_detect)))
 
     train_idx, test_idx = get_train_test_idx(train_ratio, len(Y_detect))
@@ -88,4 +88,4 @@ def get_detection_train_test_set(X_test_all, Y_test, X_test_adv_discretized_list
     print ("Positive ratio in train %d/%d" % (np.sum(Y_detect_train), len(Y_detect_train)))
     print ("Positive ratio in test %d/%d" % (np.sum(Y_detect_test), len(Y_detect_test)))
 
-    return X_detect_train, Y_detect_train, X_detect_test, Y_detect_test, test_idx
+    return X_detect_train, Y_detect_train, X_detect_test, Y_detect_test, test_idx, failed_adv_idx

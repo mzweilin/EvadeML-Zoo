@@ -202,6 +202,27 @@ class FeatureSqueezingDetector:
         layer_output = Model(inputs=self.model.layers[0].input, outputs=self.model.layers[layer_id].output)
         return layer_output.predict(X)
 
+
+    def output_distance_csv(self, X_list, field_name_list, csv_fpath):
+        from utils.output import write_to_csv
+        distances_list = []
+        for X in X_list:
+            distances = self.get_distance(X)
+            distances_list.append(distances)
+
+        to_csv = []
+        for i in range(len(X_list[0])):
+            record = {}
+            for j, field_name in enumerate(field_name_list):
+                if len(distances_list[j]) > i:
+                    record[field_name] = distances_list[j][i]
+                else:
+                    record[field_name] = None
+            to_csv.append(record)
+
+        write_to_csv(to_csv, csv_fpath, field_name_list)
+
+
     # Only examine the legitimate examples to get the threshold, ensure low False Positive rate.
     def train(self, X, Y, tnr = 0.95):
         """

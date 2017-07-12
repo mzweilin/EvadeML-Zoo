@@ -20,8 +20,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('dataset_name', 'MNIST', 'Supported: MNIST, CIFAR-10, ImageNet.')
 flags.DEFINE_integer('nb_examples', 100, 'The number of examples selected for attacks.')
 flags.DEFINE_boolean('test_mode', False, 'Only select one sample for each class.')
-flags.DEFINE_string('model_name', 'cleverhans', 'Supported: carlini for MNIST and CIFAR-10; cleverhans and cleverhans_adv_trained for MNIST; ResNet50, VGG19, Inceptionv3 and MobileNet for ImageNet.')
-flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=10&max_iterations=1000;CarliniL2?targeted=next&batch_size=10&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
+flags.DEFINE_string('model_name', 'cleverhans', 'Supported: cleverhans, cleverhans_adv_trained and carlini for MNIST; carlini and DenseNet for CIFAR-10;  ResNet50, VGG19, Inceptionv3 and MobileNet for ImageNet.')
+flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=100&max_iterations=1000;CarliniL2?targeted=next&batch_size=100&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples for each attack, enabled by default.')
 flags.DEFINE_string('defense', 'feature_squeezing1', 'Supported: feature_squeezing.')
 flags.DEFINE_string('detection', 'feature_squeezing1', 'Supported: feature_squeezing.')
@@ -84,6 +84,7 @@ def main(argv=None):
 
     # 3. Evaluate the trained model.
     # TODO: add top-5 accuracy for ImageNet.
+    print ("Evaluating the pre-trained model...")
     Y_pred_all = model.predict(X_test_all)
     mean_conf_all = calculate_mean_confidence(Y_pred_all, Y_test_all)
     accuracy_all = calculate_accuracy(Y_pred_all, Y_test_all)
@@ -150,7 +151,7 @@ def main(argv=None):
 
     X_test_adv_list = []
 
-    attack_string_list = filter(lambda x:len(x)>0, FLAGS.attacks.split(';'))
+    attack_string_list = filter(lambda x:len(x)>0, FLAGS.attacks.lower().split(';'))
     to_csv = []
 
     X_adv_cache_folder = os.path.join(FLAGS.result_folder, 'adv_examples')
@@ -173,7 +174,7 @@ def main(argv=None):
         else:
             targeted = False
             attack_params['targeted'] = False
-            Y_test_target = Y_test
+            Y_test_target = Y_test.copy()
 
         x_adv_fname = "%s_%s.pickle" % (task_id, attack_string)
         x_adv_fpath = os.path.join(X_adv_cache_folder, x_adv_fname)
@@ -224,9 +225,12 @@ def main(argv=None):
 
     if FLAGS.visualize is True:
         from datasets.visualization import show_imgs_in_rows
-        selected_idx_vis = get_first_example_id_each_class(Y_test)
-
+        if FLAGS.test_mode:
+            selected_idx_vis = range(Y_test.shape[1])
+        else:
+            selected_idx_vis = get_first_example_id_each_class(Y_test)
         legitimate_examples = X_test[selected_idx_vis]
+
         rows = [legitimate_examples]
         rows += map(lambda x:x[selected_idx_vis], X_test_adv_list)
 
@@ -242,15 +246,13 @@ def main(argv=None):
         """
         Test the accuracy with feature squeezing filters.
         """
-        from defenses.feature_squeezing.robustness import calculate_squeezed_accuracy
+        from defenses.feature_squeezing.robustness import calculate_squeezed_accuracy_new
 
-        for attack_string, X_test_adv in zip(attack_string_list, X_test_adv_list):
-            csv_fpath = "%s_%s_robustness.csv" % (task_id, attack_string)
-            csv_fpath = os.path.join(FLAGS.result_folder, csv_fpath)
-
-            print ("\n===Calculating the accuracy with feature squeezing...")
-            calculate_squeezed_accuracy(model, Y_test, X_test, X_test_adv, csv_fpath)
-            print ("\n---Results are stored in ", csv_fpath, '\n')
+        # Calculate the accuracy of legitimate examples for only once.
+        csv_fpath = "%s_%s_robustness.csv" % (task_id, attack_string_hash)
+        print ("Saving robustness test results at %s" % csv_fpath)
+        csv_fpath = os.path.join(FLAGS.result_folder, csv_fpath)
+        calculate_squeezed_accuracy_new(model, Y_test, X_test, attack_string_list, X_test_adv_list, csv_fpath)
 
 
     # 7. Detection experiment. 
@@ -262,7 +264,7 @@ def main(argv=None):
         from utils.detection import evalulate_detection_test, get_detection_train_test_set
 
         # 7.1 Prepare the dataset for detection.
-        X_detect_train, Y_detect_train, X_detect_test, Y_detect_test, test_idx = \
+        X_detect_train, Y_detect_train, X_detect_test, Y_detect_test, test_idx, failed_adv_idx = \
                     get_detection_train_test_set(X_test_all, Y_test, X_test_adv_discretized_list, predict_func=model.predict)
 
         # 7.2 Enumerate all specified detection methods.
@@ -287,11 +289,20 @@ def main(argv=None):
             squeezers_name = ["bit_depth_5", 'median_smoothing_1_2', 'median_smoothing_2_1','median_smoothing_2']
 
         # best_metrics = fsd.view_adv_propagation(X_test, X_test_adv_list[0], squeezers_name)
-        best_metrics = [[len(model.layers)-1, 'none', 'kl_f']]
+        # best_metrics = [[len(model.layers)-1, 'none', 'kl_f'], [len(model.layers)-1, 'none', 'l1'], [len(model.layers)-1, 'none', 'l2'], \
+                        # [len(model.layers)-1, 'unit_norm', 'l1'], [len(model.layers)-1, 'unit_norm', 'l2']]
+        best_metrics = [[len(model.layers)-1, 'none', 'l1']]
 
         for layer_id, normalizer_name, metric_name in best_metrics:
             fsd.set_config(layer_id, normalizer_name, metric_name, squeezers_name)
             print ("===Detection config: Layer-%d, Metric-%s, Norm-%s" % (layer_id, metric_name, normalizer_name))
+
+            csv_fpath = "%s_distances_%s_%s_layer_%d.csv" % (task_id, metric_name, normalizer_name, layer_id)
+            csv_fpath = os.path.join(FLAGS.result_folder, csv_fpath)
+
+            fsd.output_distance_csv([X_test_all] + X_test_adv_discretized_list, ['legitimate'] + attack_string_list, csv_fpath)
+
+            # continue
 
             threshold = fsd.train(X_detect_train, Y_detect_train)
             Y_detect_pred, distances = fsd.test(X_detect_test)
