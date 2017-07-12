@@ -3,7 +3,7 @@
 The goal of this project:
 * Several datasets ready to use: MNIST, CIFAR-10, ImageNet-ILSVRC and more.
 * Pre-trained really state-of-the-art models to attack.
-* Existing attacking methods: FGSM, BIM, JSMA, Deepfool, Carlini/Wagner-L2/Li/L0 and more.
+* Existing attacking methods: FGSM, BIM, JSMA, Deepfool, Universal Perturbations, Carlini/Wagner-L2/Li/L0 and more.
 * Visualization of adversarial examples.
 * Existing defense methods.
 
