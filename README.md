@@ -24,7 +24,6 @@ usage: python main.py [-h] [--dataset_name DATASET_NAME] [--nb_examples NB_EXAMP
                [--detection DETECTION] [--result_folder RESULT_FOLDER]
                [--verbose [VERBOSE]] [--noverbose]
 
-optional arguments:
   -h, --help            show this help message and exit
   --dataset_name DATASET_NAME
                         Supported: MNIST, CIFAR-10, ImageNet.
@@ -34,9 +33,10 @@ optional arguments:
                         Only select one sample for each class.
   --notest_mode
   --model_name MODEL_NAME
-                        Supported: carlini for MNIST and CIFAR-10; cleverhans
-                        and cleverhans_adv_trained for MNIST; ResNet50, VGG19,
-                        Inceptionv3 and MobileNet for ImageNet.
+                        Supported: cleverhans, cleverhans_adv_trained and
+                        carlini for MNIST; carlini and DenseNet for CIFAR-10;
+                        ResNet50, VGG19, Inceptionv3 and MobileNet for
+                        ImageNet.
   --attacks ATTACKS     Attack name and parameters in URL style, separated by
                         semicolon.
   --visualize [VISUALIZE]
