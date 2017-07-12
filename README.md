@@ -5,7 +5,7 @@ The goal of this project:
 * Pre-trained really state-of-the-art models to attack.
 * Existing attacking methods: FGSM, BIM, JSMA, Deepfool, Universal Perturbations, Carlini/Wagner-L2/Li/L0 and more.
 * Visualization of adversarial examples.
-* Existing defense methods.
+* Existing defense methods as baseline.
 
 ## 1. Install dependencies.
 
