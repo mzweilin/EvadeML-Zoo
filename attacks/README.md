@@ -29,7 +29,7 @@
 | max_iterations        |   10000    |    1000    |   1000  |
 | abort_early           |   true    |    true    |   true|
 | initial_const         |   0.001    |    0.00001    |   0.001  |
-| largest_const         |   -    |    2e+1    |   2e+6  |
+| largest_const         |   -    |    2e1    |   2e6  |
 | reduce_const          |   -    |    false    |   false  |
 | decrease_factor       |   -    |    0.9    |   -  |
 | const_factor          |   -    |    2.0    |   2.0  |
