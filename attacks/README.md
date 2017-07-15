@@ -35,6 +35,7 @@
 | const_factor          |   -    |    2.0    |   2.0  |
 | independent_channels  |   -    |    -    |   false  |
 
+*Note*: C/W Li has an additional variable Tau to control the perturbations, thus the largest_const could be smaller to get successful adversarial examples while it significantly saves computation resource.
 
 ### DeepFool
 
