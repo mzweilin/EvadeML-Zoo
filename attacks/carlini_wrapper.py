@@ -92,7 +92,7 @@ def generate_carlini_li_examples(sess, model, x, y, X, Y, attack_params, verbose
     else:
         batch_size= 10
 
-    accepted_params = ['targeted', 'learning_rate', 'max_iterations', 'abort_early', 'initial_const', 'largest_const', 'reduce_const', 'decrease_factor', 'const_factor']
+    accepted_params = ['targeted', 'learning_rate', 'max_iterations', 'abort_early', 'initial_const', 'largest_const', 'reduce_const', 'decrease_factor', 'const_factor', 'confidence']
     for k in attack_params:
         if k not in accepted_params:
             raise NotImplementedError("Unsuporrted params in Carlini Li: %s" % k)
@@ -107,9 +107,10 @@ def generate_carlini_li_examples(sess, model, x, y, X, Y, attack_params, verbose
         for i in bar:
             if i % batch_size == 0:
                 X_sub = X[i:min(i+batch_size, len(X)),:]
+                Y_sub = Y[i:min(i+batch_size, len(X)),:]
                 if not verbose:
                     disablePrint(attack_log_fpath)
-                X_adv_sub = attack.attack(X_sub - 0.5, Y) + 0.5
+                X_adv_sub = attack.attack(X_sub - 0.5, Y_sub) + 0.5
                 if not verbose:
                     enablePrint()
                 X_adv_list.append(X_adv_sub)
@@ -128,7 +129,7 @@ def generate_carlini_l0_examples(sess, model, x, y, X, Y, attack_params, verbose
     else:
         batch_size= 10
 
-    accepted_params = ['targeted', 'learning_rate', 'max_iterations', 'abort_early', 'initial_const', 'largest_const', 'reduce_const', 'decrease_factor', 'const_factor', 'independent_channels']
+    accepted_params = ['targeted', 'learning_rate', 'max_iterations', 'abort_early', 'initial_const', 'largest_const', 'reduce_const', 'decrease_factor', 'const_factor', 'independent_channels', 'confidence']
     for k in attack_params:
         if k not in accepted_params:
             raise NotImplementedError("Unsuporrted params in Carlini L0: %s" % k)
@@ -143,9 +144,10 @@ def generate_carlini_l0_examples(sess, model, x, y, X, Y, attack_params, verbose
         for i in bar:
             if i % batch_size == 0:
                 X_sub = X[i:min(i+batch_size, len(X)),:]
+                Y_sub = Y[i:min(i+batch_size, len(X)),:]
                 if not verbose:
                     disablePrint(attack_log_fpath)
-                X_adv_sub = attack.attack(X_sub - 0.5, Y) + 0.5
+                X_adv_sub = attack.attack(X_sub - 0.5, Y_sub) + 0.5
                 if not verbose:
                     enablePrint()
                 X_adv_list.append(X_adv_sub)
