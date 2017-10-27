@@ -4,15 +4,20 @@
 [submodule "externals/carlini/nn_robust_attacks"]
 	path = externals/carlini/nn_robust_attacks
 	url = https://github.com/mzweilin/nn_robust_attacks.git
+	ignore = dirty
 [submodule "externals/keras_models"]
 	path = externals/keras_models
 	url = https://github.com/fchollet/deep-learning-models.git
+	ignore = dirty
 [submodule "externals/MobileNetworks"]
 	path = externals/MobileNetworks
 	url = https://github.com/titu1994/MobileNetworks.git
+	ignore = dirty
 [submodule "externals/universal"]
 	path = externals/universal
 	url = https://github.com/LTS4/universal.git
+	ignore = dirty
 [submodule "externals/titu1994/DenseNet"]
 	path = externals/titu1994/DenseNet
 	url = https://github.com/titu1994/DenseNet.git
+	ignore = dirty
