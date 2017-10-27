@@ -3,7 +3,7 @@
 	url = https://github.com/openai/cleverhans.git
 [submodule "externals/carlini/nn_robust_attacks"]
 	path = externals/carlini/nn_robust_attacks
-	url = https://github.com/carlini/nn_robust_attacks.git
+	url = https://github.com/mzweilin/nn_robust_attacks.git
 [submodule "externals/keras_models"]
 	path = externals/keras_models
 	url = https://github.com/fchollet/deep-learning-models.git
