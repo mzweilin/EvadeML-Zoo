@@ -7,18 +7,26 @@ The goal of this project:
 * Visualization of adversarial examples.
 * Existing defense methods as baseline.
 
-## 1. Install dependencies.
-
 The code should be runnable on both Python 3 and Python 2.
 
+
+## 1. Install dependencies.
+
 ```bash
-pip install -r requirements.txt
+pip install -r requirements_cpu.txt
+```
+
+If you are going to run the code on GPU, install this list instead:
+```bash
+pip install -r requirements_gpu.txt
+```
+
+## 2. Fetch submodules.
+```bash
 git submodule update --init --recursive
 ```
 
-
-
-## 2. Usage of `python main.py`
+## 3. Usage of `python main.py`
 ```
 usage: python main.py [-h] [--dataset_name DATASET_NAME] [--nb_examples NB_EXAMPLES]
                [--test_mode [TEST_MODE]] [--notest_mode]
