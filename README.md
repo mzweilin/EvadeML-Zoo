@@ -9,11 +9,14 @@ The goal of this project:
 
 ## 1. Install dependencies.
 
-Python 2.7
+The code should be runnable on both Python 3 and Python 2.
 
 ```bash
-pip install tensorflow-gpu==1.1.0 keras==2.0.4 matplotlib h5py pillow scikit-learn click future
+pip install -r requirements.txt
+git submodule update --init --recursive
 ```
+
+
 
 ## 2. Usage of `python main.py`
 ```
