@@ -23,8 +23,8 @@ flags.DEFINE_boolean('test_mode', False, 'Only select one sample for each class.
 flags.DEFINE_string('model_name', 'cleverhans', 'Supported: cleverhans, cleverhans_adv_trained and carlini for MNIST; carlini and DenseNet for CIFAR-10;  ResNet50, VGG19, Inceptionv3 and MobileNet for ImageNet.')
 flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=100&max_iterations=1000;CarliniL2?targeted=next&batch_size=100&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples for each attack, enabled by default.')
-flags.DEFINE_string('defense', 'feature_squeezing1', 'Supported: feature_squeezing.')
-flags.DEFINE_string('detection', 'feature_squeezing1', 'Supported: feature_squeezing.')
+flags.DEFINE_string('robustness', '', 'Supported: FeatureSqueezing.')
+flags.DEFINE_string('detection', '', 'Supported: feature_squeezing.')
 flags.DEFINE_string('result_folder', "results", 'The output folder for results.')
 flags.DEFINE_boolean('verbose', False, 'Stdout level. The hidden content will be saved to log files anyway.')
 
@@ -150,6 +150,7 @@ def main(argv=None):
     Y_test_target_ll = get_least_likely_class(Y_pred)
 
     X_test_adv_list = []
+    Y_test_adv_discretized_pred_list = []
 
     attack_string_list = filter(lambda x:len(x)>0, FLAGS.attacks.lower().split(';'))
     to_csv = []
@@ -215,6 +216,7 @@ def main(argv=None):
         print ("\n---Attack (uint8): %s" % attack_string)
         X_test_adv_discret = reduce_precision_np(X_test_adv, 256)
         Y_test_adv_discret_pred = model.predict(X_test_adv_discret)
+        Y_test_adv_discretized_pred_list.append(Y_test_adv_discret_pred)
         rec = evaluate_adversarial_examples(X_test, X_test_adv_discret, Y_test_target.copy(), targeted, Y_test_adv_discret_pred)
         rec['dataset_name'] = FLAGS.dataset_name
         rec['model_name'] = FLAGS.model_name
@@ -249,109 +251,40 @@ def main(argv=None):
 
         # TODO: output the prediction and confidence for each example, both legitimate and adversarial.
 
-
-    # 6. Evaluate defense techniques.
-    if FLAGS.defense == 'feature_squeezing':
-        """
-        Test the accuracy with feature squeezing filters.
-        """
-        from defenses.feature_squeezing.robustness import calculate_squeezed_accuracy_new
-
-        # Calculate the accuracy of legitimate examples for only once.
-        csv_fpath = "%s_%s_robustness.csv" % (task_id, attack_string_hash)
-        print ("Saving robustness test results at %s" % csv_fpath)
-        csv_fpath = os.path.join(FLAGS.result_folder, csv_fpath)
-        calculate_squeezed_accuracy_new(model, Y_test, X_test, attack_string_list, X_test_adv_list, csv_fpath)
-
-
-    # 7. Detection experiment. 
     # All data should be discretized to uint8.
     X_test_adv_discretized_list = [ reduce_precision_np(X_test_adv, 256) for X_test_adv in X_test_adv_list]
     del X_test_adv_list
 
-    if FLAGS.detection == 'feature_squeezing':
-        from utils.detection import evalulate_detection_test, get_detection_train_test_set
 
-        # 7.1 Prepare the dataset for detection.
-        X_detect_train, Y_detect_train, X_detect_test, Y_detect_test, test_idx, failed_adv_idx = \
-                    get_detection_train_test_set(X_test_all, Y_test, X_test_adv_discretized_list, predict_func=model.predict)
+    # 6. Evaluate robust classification techniques.
+    # Example: --robustness "Base;FeatureSqueezing?squeezer=bit_depth_1;FeatureSqueezing?squeezer=median_filter_2;"
+    if FLAGS.robustness != '':
+        """
+        Test the accuracy with robust classifiers.
+        """
+        from robustness import evaluate_robustness
+        robustness_string_hash = hashlib.sha1(FLAGS.robustness.encode('utf-8')).hexdigest()[:5]
+        csv_fpath = "%s_%s_robustness_%s.csv" % (task_id, attack_string_hash, robustness_string_hash)
+        print ("Saving robustness test results at %s" % csv_fpath)
+        csv_fpath = os.path.join(FLAGS.result_folder, csv_fpath)
+        evaluate_robustness(FLAGS.robustness, model, Y_test, X_test, attack_string_list, X_test_adv_discretized_list, csv_fpath)
 
-        # 7.2 Enumerate all specified detection methods.
-        # Take Feature Squeezing as an example.
+    # 7. Detection experiment.
+    # Example: --detection "FeatureSqueezing?distance_measure=l1&squeezers=median_smoothing_2,bit_depth_4,bilateral_filter_15_15_60;"
 
-        csv_fname = "%s_attacks_%s_detection_two_filters_%s_raw_adv.csv" % (task_id, attack_string_hash, FLAGS.detection)
+    if FLAGS.detection != '':
+        from detections.base import DetectionEvaluator
+
+        csv_fname = "%s_attacks_%s_detection.csv" % (task_id, attack_string_hash)
         detection_csv_fpath = os.path.join(FLAGS.result_folder, csv_fname)
-        to_csv = []
+        # TODO: Output csv results.
 
-        from defenses.feature_squeezing.detection import FeatureSqueezingDetector
-        from sklearn.metrics import roc_curve, auc
-        fsd = FeatureSqueezingDetector(model, task_id, attack_string_hash)
+        de = DetectionEvaluator(model, detection_csv_fpath)
+        Y_test_all_pred = model.predict(X_test_all)
 
-        # TODO: Automatically get the suitable squeezers through robustness test with legitimate examples.
-        # squeezers_name = fsd.select_squeezers(X_test, Y_test, accuracy_preserved=0.9)
+        de.build_detection_dataset(X_test_all, Y_test_all, Y_test_all_pred, X_test_adv_discretized_list, Y_test_adv_discretized_pred_list, attack_string_list, attack_string_hash)
+        de.evaluate_detections(FLAGS.detection)
 
-        if FLAGS.dataset_name == "MNIST":
-            squeezers_name = ['median_smoothing_2', 'median_smoothing_3', 'binary_filter']
-        elif FLAGS.dataset_name == "CIFAR-10":
-            squeezers_name = ["bit_depth_6", 'median_smoothing_1_2', 'median_smoothing_2_1','median_smoothing_2']
-        elif FLAGS.dataset_name == "ImageNet":
-            squeezers_name = ["bit_depth_5", 'median_smoothing_1_2', 'median_smoothing_2_1','median_smoothing_2']
-
-        # best_metrics = fsd.view_adv_propagation(X_test, X_test_adv_list[0], squeezers_name)
-        # best_metrics = [[len(model.layers)-1, 'none', 'kl_f'], [len(model.layers)-1, 'none', 'l1'], [len(model.layers)-1, 'none', 'l2'], \
-                        # [len(model.layers)-1, 'unit_norm', 'l1'], [len(model.layers)-1, 'unit_norm', 'l2']]
-        best_metrics = [[len(model.layers)-1, 'none', 'l1']]
-
-        for layer_id, normalizer_name, metric_name in best_metrics:
-            fsd.set_config(layer_id, normalizer_name, metric_name, squeezers_name)
-            print ("===Detection config: Layer-%d, Metric-%s, Norm-%s" % (layer_id, metric_name, normalizer_name))
-
-            csv_fpath = "%s_distances_%s_%s_layer_%d.csv" % (task_id, metric_name, normalizer_name, layer_id)
-            csv_fpath = os.path.join(FLAGS.result_folder, csv_fpath)
-
-            fsd.output_distance_csv([X_test_all] + X_test_adv_discretized_list, ['legitimate'] + attack_string_list, csv_fpath)
-
-            # continue
-
-            threshold = fsd.train(X_detect_train, Y_detect_train)
-            Y_detect_pred, distances = fsd.test(X_detect_test)
-
-            accuracy, tpr, fpr = evalulate_detection_test(Y_detect_test, Y_detect_pred)
-            fprs, tprs, thresholds = roc_curve(Y_detect_test, distances)
-            roc_auc = auc(fprs, tprs)
-
-            print ("ROC-AUC: %.2f, Accuracy: %.2f, TPR: %.2f, FPR: %.2f, Threshold: %.2f." % (roc_auc, accuracy, tpr, fpr, threshold))
-
-            ret = {}
-            ret['threshold'] = threshold
-            ret['accuracy'] = accuracy
-            ret['fpr'] = fpr
-            ret['tpr'] = tpr
-            ret['roc_auc'] = roc_auc
-
-            # index of false negatives
-            fn_idx = np.where((Y_detect_test == True) & (Y_detect_pred == False))
-            # index in Y_detect.
-            fn_idx_Y_test = np.array(test_idx)[fn_idx]
-
-            nb_failed_as_negative = len(fn_idx_Y_test) - len(set(fn_idx_Y_test) - set(failed_adv_idx))
-            print ("%d/%d failed adv. examples in false negatives." % (nb_failed_as_negative, len(fn_idx_Y_test)))
-
-            ret['fn'] = len(fn_idx_Y_test)
-            ret['failed_adv_as_fn'] = nb_failed_as_negative
-
-            tp_idx = np.where((Y_detect_test == True) & (Y_detect_pred == True))
-            tp_idx_Y_test = np.array(test_idx)[tp_idx]
-            nb_failed_as_positive = len(tp_idx_Y_test) - len(set(tp_idx_Y_test) - set(failed_adv_idx))
-            print ("%d/%d failed adv. examples in true positives." % (nb_failed_as_positive, len(tp_idx_Y_test)))
-
-            ret['layer_id'] = layer_id
-            ret['normalizer'] = normalizer_name
-            ret['distance_metric'] = metric_name
-            to_csv.append(ret)
-
-        fieldnames = ['layer_id', 'distance_metric', 'normalizer', 'roc_auc', 'accuracy', 'tpr', 'fpr', 'threshold', 'failed_adv_as_fn', 'fn']
-        write_to_csv(to_csv, detection_csv_fpath, fieldnames)
 
 if __name__ == '__main__':
     main()

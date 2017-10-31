@@ -10,11 +10,10 @@ import pdb
 import random
 import sys, os
 
-from .squeeze import median_filter_np, binary_filter_np, reduce_precision_np
-
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from utils.visualization import draw_plot
-
+# from utils.visualization import draw_plot
+from utils.squeeze import get_squeezer_by_name
+from utils.parameter_parser import parse_params
 
 def reshape_2d(x):
     if len(x.shape) > 2:
@@ -68,29 +67,22 @@ def kl(x1, x2):
 
 
 class FeatureSqueezingDetector:
-    def __init__(self, model, data_model_name, attack_hash):
+    def __init__(self, model, param_str):
         self.model = model
-        self.name_prefix = "%s_%s" % (data_model_name, attack_hash)
+        subject, params = parse_params(param_str)
+
+        layer_id = len(model.layers)-1
+        normalizer = 'none'
+        metric = params['distance_measure']
+        squeezers_name = params['squeezers'].split(',')
+        self.set_config(layer_id, normalizer, metric, squeezers_name)
 
     def get_squeezer_by_name(self, name):
-        if name == 'binary_filter':
-            func = binary_filter_np
-        if name.startswith('bit_depth_'):
-            params = int(name[len('bit_depth_'):])
-            precisions = 2**params
-            func = lambda x: reduce_precision_np(x, precisions)
-        elif name.startswith('median_smoothing_'):
-            params = name[len('median_smoothing_'):]
-            params = map(int, params.split('_'))
-            if len(params) == 1:
-                params.append(params[0])
-            h, w = params
-            func = lambda x: median_filter_np(x, h, w)
-        return func
+        return get_squeezer_by_name(name, 'python')
 
     def get_normalizer_by_name(self, name):
-            d = {'unit_norm': unit_norm, 'softmax': softmax, 'none': lambda x:x}
-            return d[name]
+        d = {'unit_norm': unit_norm, 'softmax': softmax, 'none': lambda x:x}
+        return d[name]
 
     def get_metric_by_name(self, name):
         d = {'kl_f': lambda x1,x2: kl(x1, x2), 'kl_b': lambda x1,x2: kl(x2, x1), 'l1': l1_dist, 'l2': l2_dist}
@@ -241,6 +233,7 @@ class FeatureSqueezingDetector:
         selected_distance_idx = int(np.ceil(len(X_neg) * tnr))
         threshold = sorted(distances)[selected_distance_idx-1]
         self.threshold = threshold
+        print ("Selected %f as the threshold value." % self.threshold)
         return threshold
 
     def test(self, X):
