@@ -251,6 +251,8 @@ def get_squeezer_by_name(name, func_type):
 
             return lambda x: globals()[func_name](*([x]+args))
 
+    raise Exception('Unknown squeezer name: %s' % name)
+
 def get_sequential_squeezers_by_name(squeezers_name):
     # example_squeezers_name = "binary_filter_0.5,median_smoothing_2_2"
     squeeze_func = None
