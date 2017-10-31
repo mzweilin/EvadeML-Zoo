@@ -7,8 +7,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.squeeze import get_squeezer_by_name
-
-from .base import parse_params
+from utils.parameter_parser import parse_params
 
 class FeatureSqueezingRC:
     def __init__(self, keras_model, rc_name):
