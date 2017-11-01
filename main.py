@@ -23,6 +23,7 @@ flags.DEFINE_boolean('test_mode', False, 'Only select one sample for each class.
 flags.DEFINE_string('model_name', 'cleverhans', 'Supported: cleverhans, cleverhans_adv_trained and carlini for MNIST; carlini and DenseNet for CIFAR-10;  ResNet50, VGG19, Inceptionv3 and MobileNet for ImageNet.')
 flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=100&max_iterations=1000;CarliniL2?targeted=next&batch_size=100&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples for each attack, enabled by default.')
+flags.DEFINE_float('clip', 0, 'L-infinity clip on the adversarial perturbations.')
 flags.DEFINE_string('robustness', '', 'Supported: FeatureSqueezing.')
 flags.DEFINE_string('detection', '', 'Supported: feature_squeezing.')
 flags.DEFINE_string('result_folder', "results", 'The output folder for results.')
@@ -141,7 +142,7 @@ def main(argv=None):
 
     # 5. Generate adversarial examples.
     from attacks import maybe_generate_adv_examples, parse_attack_string
-    from defenses.feature_squeezing.squeeze import reduce_precision_np
+    from utils.squeeze import reduce_precision_py
     attack_string_hash = hashlib.sha1(FLAGS.attacks.encode('utf-8')).hexdigest()[:5]
     sample_string_hash = task['test_set_selected_idx_hash'][:5]
 
@@ -214,7 +215,7 @@ def main(argv=None):
 
         # 5.2 Adversarial examples being discretized to uint8.
         print ("\n---Attack (uint8): %s" % attack_string)
-        X_test_adv_discret = reduce_precision_np(X_test_adv, 256)
+        X_test_adv_discret = reduce_precision_py(X_test_adv, 256)
         Y_test_adv_discret_pred = model.predict(X_test_adv_discret)
         Y_test_adv_discretized_pred_list.append(Y_test_adv_discret_pred)
         rec = evaluate_adversarial_examples(X_test, X_test_adv_discret, Y_test_target.copy(), targeted, Y_test_adv_discret_pred)
@@ -251,10 +252,23 @@ def main(argv=None):
 
         # TODO: output the prediction and confidence for each example, both legitimate and adversarial.
 
-    # All data should be discretized to uint8.
-    X_test_adv_discretized_list = [ reduce_precision_np(X_test_adv, 256) for X_test_adv in X_test_adv_list]
-    del X_test_adv_list
+    # Limit the perturbations amount before evaluating defense techniques.
+    if FLAGS.clip > 0:
+        epsilon = FLAGS.clip
+        print ("Clip the adversarial perturbations by +-%f" % epsilon)
+        max_clip = np.clip(X_test + epsilon, 0, 1)
+        min_clip = np.clip(X_test - epsilon, 0, 1)
 
+        for i, X_test_adv in enumerate(X_test_adv_list):
+            X_test_adv_clipped = np.clip(X_test_adv,
+                                      min_clip,
+                                      max_clip)
+            X_test_adv_list[i] = X_test_adv_clipped
+
+
+    # All data should be discretized to uint8.
+    X_test_adv_discretized_list = [ reduce_precision_py(X_test_adv, 256) for X_test_adv in X_test_adv_list]
+    del X_test_adv_list
 
     # 6. Evaluate robust classification techniques.
     # Example: --robustness "Base;FeatureSqueezing?squeezer=bit_depth_1;FeatureSqueezing?squeezer=median_filter_2;"

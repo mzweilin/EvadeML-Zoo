@@ -62,6 +62,7 @@ class DetectionEvaluator:
             14,     0,           0,             1
         """
 
+        self.attack_names = attack_names
         self.attack_name_id = {}
         self.attack_name_id['legitimate'] = 0
         for i,attack_name in enumerate(attack_names):
@@ -153,7 +154,6 @@ class DetectionEvaluator:
 
     def evaluate_detections(self, params_str):
         X_train, Y_train, X_test, Y_test = self.get_training_testing_data()
-        X_fgs_sae, Y_fgs_sae = self.get_sae_testing_data("fgsm?eps=0.3")
 
         # Example: --detection "FeatureSqueezing?distance_measure=l1&squeezers=median_smoothing_2,bit_depth_4;"
         detector_names = [ele.strip() for ele in params_str.split(';') if ele.strip()!= '']
@@ -171,8 +171,9 @@ class DetectionEvaluator:
             print (accuracy, tpr, fpr, roc_auc)
 
 
-            Y_test_pred, Y_test_pred_score = detector.test(X_fgs_sae)
-            _, tpr, _ = evalulate_detection_test(Y_fgs_sae, Y_test_pred)
-
-            print ("Detection rate on SAE: %.4f" % tpr)
+            for attack_name in self.attack_names:
+                X_sae, Y_sae = self.get_sae_testing_data(attack_name)
+                Y_test_pred, Y_test_pred_score = detector.test(X_sae)
+                _, tpr, _ = evalulate_detection_test(Y_sae, Y_test_pred)
+                print ("Detection rate on SAEs: %.4f \t %s" % (tpr, attack_name))
 
