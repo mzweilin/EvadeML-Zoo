@@ -160,6 +160,9 @@ class DetectionEvaluator:
         
         for detector_name in detector_names:
             detector = self.get_detector_by_name(detector_name)
+            if detector is None:
+                print ("Skipped an unknown detector [%s]" % detector_name.split('?')[0])
+                continue
             detector.train(X_train, Y_train)
             Y_test_pred, Y_test_pred_score = detector.test(X_test)
 
@@ -171,9 +174,15 @@ class DetectionEvaluator:
             print (accuracy, tpr, fpr, roc_auc)
 
 
+            overall_detection_rate_saes = 0
+            nb_saes = 0
             for attack_name in self.attack_names:
                 X_sae, Y_sae = self.get_sae_testing_data(attack_name)
                 Y_test_pred, Y_test_pred_score = detector.test(X_sae)
                 _, tpr, _ = evalulate_detection_test(Y_sae, Y_test_pred)
                 print ("Detection rate on SAEs: %.4f \t %s" % (tpr, attack_name))
+                overall_detection_rate_saes += tpr * len(Y_sae)
+                nb_saes += len(Y_sae)
+
+            print ("Overall detection rate on SAEs: %f" % (overall_detection_rate_saes/nb_saes))
 
