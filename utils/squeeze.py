@@ -147,7 +147,7 @@ def otsu_binarize_py(x):
 # Non-local Means
 def non_local_means_color_py(imgs, search_window, block_size, photo_render):
     import cv2
-    ret_imgs = opencv_wrapper(imgs_copy, cv2.fastNlMeansDenoisingColored, [None,photo_render,photo_render,block_size,search_window])
+    ret_imgs = opencv_wrapper(imgs, cv2.fastNlMeansDenoisingColored, [None,photo_render,photo_render,block_size,search_window])
     return ret_imgs
 
 def non_local_means_color_tf(imgs, search_window, block_size, photo_render):
