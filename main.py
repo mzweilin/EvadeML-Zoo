@@ -151,6 +151,7 @@ def main(argv=None):
     Y_test_target_ll = get_least_likely_class(Y_pred)
 
     X_test_adv_list = []
+    X_test_adv_discretized_list = []
     Y_test_adv_discretized_pred_list = []
 
     attack_string_list = filter(lambda x:len(x)>0, FLAGS.attacks.lower().split(';'))
@@ -166,6 +167,12 @@ def main(argv=None):
     predictions_fpath = os.path.join(predictions_folder, "legitimate.npy")
     np.save(predictions_fpath, Y_pred, allow_pickle=False)
 
+    if FLAGS.clip > 0:
+        epsilon = FLAGS.clip
+        print ("Clip the adversarial perturbations by +-%f" % epsilon)
+        max_clip = np.clip(X_test + epsilon, 0, 1)
+        min_clip = np.clip(X_test - epsilon, 0, 1)
+
     for attack_string in attack_string_list:
         attack_log_fpath = os.path.join(adv_log_folder, "%s_%s.log" % (task_id, attack_string))
         attack_name, attack_params = parse_attack_string(attack_string)
@@ -173,10 +180,14 @@ def main(argv=None):
 
         if 'targeted' in attack_params:
             targeted = attack_params['targeted']
+            print ("targeted value: %s" % targeted)
             if targeted == 'next':
                 Y_test_target = Y_test_target_next
             elif targeted == 'll':
                 Y_test_target = Y_test_target_ll
+            elif targeted == False:
+                attack_params['targeted'] = False
+                Y_test_target = Y_test.copy()
         else:
             targeted = False
             attack_params['targeted'] = False
@@ -186,6 +197,12 @@ def main(argv=None):
         x_adv_fpath = os.path.join(X_adv_cache_folder, x_adv_fname)
 
         X_test_adv, aux_info = maybe_generate_adv_examples(sess, model, x, y, X_test, Y_test_target, attack_name, attack_params, use_cache = x_adv_fpath, verbose=FLAGS.verbose, attack_log_fpath=attack_log_fpath)
+
+        if FLAGS.clip > 0:
+            X_test_adv = np.clip(X_test_adv,
+                                          min_clip,
+                                          max_clip)
+
         X_test_adv_list.append(X_test_adv)
 
         if isinstance(aux_info, float):
@@ -216,6 +233,7 @@ def main(argv=None):
         # 5.2 Adversarial examples being discretized to uint8.
         print ("\n---Attack (uint8): %s" % attack_string)
         X_test_adv_discret = reduce_precision_py(X_test_adv, 256)
+        X_test_adv_discretized_list.append(X_test_adv_discret)
         Y_test_adv_discret_pred = model.predict(X_test_adv_discret)
         Y_test_adv_discretized_pred_list.append(Y_test_adv_discret_pred)
         rec = evaluate_adversarial_examples(X_test, X_test_adv_discret, Y_test_target.copy(), targeted, Y_test_adv_discret_pred)
@@ -252,22 +270,7 @@ def main(argv=None):
 
         # TODO: output the prediction and confidence for each example, both legitimate and adversarial.
 
-    # Limit the perturbations amount before evaluating defense techniques.
-    if FLAGS.clip > 0:
-        epsilon = FLAGS.clip
-        print ("Clip the adversarial perturbations by +-%f" % epsilon)
-        max_clip = np.clip(X_test + epsilon, 0, 1)
-        min_clip = np.clip(X_test - epsilon, 0, 1)
-
-        for i, X_test_adv in enumerate(X_test_adv_list):
-            X_test_adv_clipped = np.clip(X_test_adv,
-                                      min_clip,
-                                      max_clip)
-            X_test_adv_list[i] = X_test_adv_clipped
-
-
     # All data should be discretized to uint8.
-    X_test_adv_discretized_list = [ reduce_precision_py(X_test_adv, 256) for X_test_adv in X_test_adv_list]
     del X_test_adv_list
 
     # 6. Evaluate robust classification techniques.
