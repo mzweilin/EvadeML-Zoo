@@ -77,6 +77,11 @@ class FeatureSqueezingDetector:
         squeezers_name = params['squeezers'].split(',')
         self.set_config(layer_id, normalizer, metric, squeezers_name)
 
+        if params.has_key('threshold'):
+            self.threshold = float(params['threshold'])
+        else:
+            self.threshold = None
+
     def get_squeezer_by_name(self, name):
         return get_squeezer_by_name(name, 'python')
 
@@ -224,17 +229,21 @@ class FeatureSqueezingDetector:
             distance metric
             feature squeezer(s)
         """
-        layer_id, normalizer_name, metric_name, squeezers_name = self.get_config()
 
-        neg_idx = np.where(Y == 0)[0]
-        X_neg = X[neg_idx]
-        distances = self.get_distance(X_neg)
+        if self.threshold is not None:
+            print ("Loaded a pre-defined threshold value %f" % self.threshold)
+        else:
+            layer_id, normalizer_name, metric_name, squeezers_name = self.get_config()
 
-        selected_distance_idx = int(np.ceil(len(X_neg) * tnr))
-        threshold = sorted(distances)[selected_distance_idx-1]
-        self.threshold = threshold
-        print ("Selected %f as the threshold value." % self.threshold)
-        return threshold
+            neg_idx = np.where(Y == 0)[0]
+            X_neg = X[neg_idx]
+            distances = self.get_distance(X_neg)
+
+            selected_distance_idx = int(np.ceil(len(X_neg) * tnr))
+            threshold = sorted(distances)[selected_distance_idx-1]
+            self.threshold = threshold
+            print ("Selected %f as the threshold value." % self.threshold)
+        return self.threshold
 
     def test(self, X):
         layer_id, normalizer_name, metric_name, squeezers_name = self.get_config()
