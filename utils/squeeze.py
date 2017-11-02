@@ -57,9 +57,7 @@ def binary_random_filter_py(x, threshold, stddev=0.125):
         rand_array = np.zeros(x.shape)
     else:
         rand_array = np.random.normal(loc=0., scale=stddev, size=x.shape)
-    print rand_array
     x_bin = np.maximum(np.sign(np.add(x, rand_array)-threshold), 0)
-    print x_bin
     return x_bin
 
 
