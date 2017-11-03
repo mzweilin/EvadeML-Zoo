@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.carlini_models import carlini_mnist_model
 from models.cleverhans_models import cleverhans_mnist_model
-
+from models.pgdtrained_models import pgdtrained_mnist_model
 
 class MNISTDataset:
     def __init__(self):
@@ -30,7 +30,7 @@ class MNISTDataset:
         :params logits: return logits(input of softmax layer) if True; return softmax output otherwise.
         :params input_range_type: {1: [0,1], 2:[-0.5, 0.5], 3:[-1, 1]...}
         """
-        if model_name not in ["cleverhans", 'cleverhans_adv_trained', 'carlini']:
+        if model_name not in ["cleverhans", 'cleverhans_adv_trained', 'carlini', 'pgdtrained']:
             raise NotImplementedError("Undefined model [%s] for %s." % (model_name, self.dataset_name))
         self.model_name = model_name
 
@@ -40,8 +40,10 @@ class MNISTDataset:
         # self.maybe_download_model()
         if model_name in ["cleverhans", 'cleverhans_adv_trained']:
             model = cleverhans_mnist_model(logits=logits, input_range_type=input_range_type, pre_filter=pre_filter)
-        else:
+        elif model_name in ['carlini']:
             model = carlini_mnist_model(logits=logits, input_range_type = input_range_type, pre_filter=pre_filter)
+        elif model_name in ['pgdtrained']:
+            model = pgdtrained_mnist_model(logits=logits, input_range_type = input_range_type, pre_filter=pre_filter)
         print("\n===Defined TensorFlow model graph.")
         model.load_weights(model_weights_fpath)
         print ("---Loaded MNIST-%s model.\n" % model_name)
