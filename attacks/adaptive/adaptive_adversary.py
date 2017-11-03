@@ -50,9 +50,7 @@ def adaptive_attack(sess, model, squeezers, x, y, X_test, Y_test_target, attack_
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from defenses.feature_squeezing.squeeze import reduce_precision_tf
-
-from utils.squeeze import get_squeezer_by_name
+from utils.squeeze import get_squeezer_by_name, reduce_precision_tf
 
 # if FLAGS.dataset_name == "MNIST":
 #     # squeezers_name = ['median_smoothing_2', 'median_smoothing_3', 'binary_filter']
