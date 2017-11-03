@@ -115,6 +115,8 @@ class DetectionEvaluator:
             self.db.insert(rec)
 
     def get_data_from_db_records(self, recs):
+        if len(recs) == 0:
+            return None, None
         X_idx = [rec['index'] for rec in recs]
         X = self.X_detect[np.array(X_idx)]
         Y = np.array([1 if rec['attack_id']>0 else 0 for rec in recs])
@@ -141,6 +143,25 @@ class DetectionEvaluator:
 
         attack_id = self.get_attack_id(attack_name)
         recs = db.search((query.train == 0) & (query.attack_id == attack_id) & (query.misclassified == 1))
+        return self.get_data_from_db_records(recs)
+
+    def get_sae_data(self, attack_name):
+        # attack_name: {[specific attack]}
+        # Category: {train, test}
+        # Misclassified: {True, False}
+        db = self.db
+        query = self.query
+
+        attack_id = self.get_attack_id(attack_name)
+        recs = db.search((query.attack_id == attack_id) & (query.misclassified == 1))
+        return self.get_data_from_db_records(recs)
+
+    def get_fae_testing_data(self, attack_name):
+        db = self.db
+        query = self.query
+
+        attack_id = self.get_attack_id(attack_name)
+        recs = db.search((query.train == 0) & (query.attack_id == attack_id) & (query.misclassified == 0))
         return self.get_data_from_db_records(recs)
 
     def get_detector_by_name(self, detector_name):
@@ -184,5 +205,34 @@ class DetectionEvaluator:
                 overall_detection_rate_saes += tpr * len(Y_sae)
                 nb_saes += len(Y_sae)
 
-            print ("Overall detection rate on SAEs: %f" % (overall_detection_rate_saes/nb_saes))
+            print ("Overall detection rate on testing-SAEs: %f" % (overall_detection_rate_saes/nb_saes))
+
+
+            overall_detection_rate_saes = 0
+            nb_saes = 0
+            for attack_name in self.attack_names:
+                X_sae, Y_sae = self.get_sae_data(attack_name)
+                Y_test_pred, Y_test_pred_score = detector.test(X_sae)
+                _, tpr, _ = evalulate_detection_test(Y_sae, Y_test_pred)
+                print ("Detection rate on SAEs: %.4f \t %s" % (tpr, attack_name))
+                overall_detection_rate_saes += tpr * len(Y_sae)
+                nb_saes += len(Y_sae)
+
+            print ("Overall detection rate on train-testing-SAEs: %f" % (overall_detection_rate_saes/nb_saes))
+
+            # FAEs
+            overall_detection_rate_faes = 0
+            nb_faes = 0
+            for attack_name in self.attack_names:
+                X_fae, Y_fae = self.get_fae_testing_data(attack_name)
+                if X_fae is None:
+                    print ("Skipped %s due to the lack of data" % attack_name)
+                    continue
+                Y_test_pred, Y_test_pred_score = detector.test(X_fae)
+                _, tpr, _ = evalulate_detection_test(Y_fae, Y_test_pred)
+                print ("Detection rate on FAEs: %.4f \t %s" % (tpr, attack_name))
+                overall_detection_rate_faes += tpr * len(Y_fae)
+                nb_faes += len(Y_fae)
+
+            print ("Overall detection rate on FAEs: %f" % (overall_detection_rate_faes/nb_faes))
 
