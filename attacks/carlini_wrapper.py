@@ -69,6 +69,9 @@ def generate_carlini_l2_examples(sess, model, x, y, X, Y, attack_params, verbose
     if 'batch_size' in attack_params and attack_params['batch_size'] > len(X):
         attack_params['batch_size'] = len(X)
 
+    if 'binary_search_steps' in attack_params:
+        attack_params['binary_search_steps'] = int(attack_params['binary_search_steps'])
+
     attack = CarliniL2(sess, model_wrapper, **attack_params)
 
     if not verbose:
