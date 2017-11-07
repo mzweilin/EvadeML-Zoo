@@ -39,6 +39,19 @@ def bit_depth_tf(x, bits):
     precisions = 2**bits
     return reduce_precision_tf(x, precisions)
 
+def bit_depth_random_py(x, bits, stddev):
+    if stddev == 0.:
+        rand_array = np.zeros(x.shape)
+    else:
+        rand_array = np.random.normal(loc=0., scale=stddev, size=x.shape)
+    x_random = np.add(x, rand_array)
+    return bit_depth_py(x_random, bits)
+
+def bit_depth_random_tf(x, bits, stddev):
+    rand_ts = tf.random_normal(x.get_shape(), mean=0, stddev=stddev)
+    x_random = tf.add(x, rand_tf)
+    return bit_depth_tf(x_random, bits)
+
 def binary_filter_tf(x, threshold):
     x_bin = tf.nn.relu(tf.sign(x-threshold))
     return x_bin
