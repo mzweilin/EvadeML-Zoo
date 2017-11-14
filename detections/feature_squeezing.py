@@ -82,6 +82,11 @@ class FeatureSqueezingDetector:
         else:
             self.threshold = None
 
+        if params.has_key('fpr'):
+            self.train_fpr = float(params['fpr'])
+        else:
+            self.train_fpr = None
+
     def get_squeezer_by_name(self, name):
         return get_squeezer_by_name(name, 'python')
 
@@ -221,7 +226,7 @@ class FeatureSqueezingDetector:
 
 
     # Only examine the legitimate examples to get the threshold, ensure low False Positive rate.
-    def train(self, X, Y, tnr = 0.95):
+    def train(self, X, Y, fpr=0.05):
         """
         Calculating distance depends on:
             layer_id
@@ -229,6 +234,9 @@ class FeatureSqueezingDetector:
             distance metric
             feature squeezer(s)
         """
+
+        if self.train_fpr is None:
+            self.train_fpr = fpr
 
         if self.threshold is not None:
             print ("Loaded a pre-defined threshold value %f" % self.threshold)
@@ -239,7 +247,7 @@ class FeatureSqueezingDetector:
             X_neg = X[neg_idx]
             distances = self.get_distance(X_neg)
 
-            selected_distance_idx = int(np.ceil(len(X_neg) * tnr))
+            selected_distance_idx = int(np.ceil(len(X_neg) * (1-self.train_fpr)))
             threshold = sorted(distances)[selected_distance_idx-1]
             self.threshold = threshold
             print ("Selected %f as the threshold value." % self.threshold)
@@ -253,3 +261,16 @@ class FeatureSqueezingDetector:
         Y_pred = distances > threshold
 
         return Y_pred, distances
+
+    def test_tf(self, X):
+        # Test distance in adaptive adversary.
+        import keras
+        from attacks.adaptive.adaptive_adversary import get_max_distance
+
+        sess = keras.backend.get_session()
+        tf_squeezers_str = ','.join(self.squeezers_name)
+        max_distances = get_max_distance(sess, self.model, X, tf_squeezers_str)
+        threshold = self.threshold
+        Y_pred = max_distances > threshold
+        return Y_pred, max_distances
+
