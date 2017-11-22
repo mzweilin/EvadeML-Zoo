@@ -106,7 +106,7 @@ def median_random_pos_size_filter_py(x, width, height=-1):
 
 def median_random_size_filter_py(x, width, height=-1):
     # assert False
-    init_op = tf.initialize_all_variables()
+    init_op = tf.global_variables_initializer()
     with tf.Session() as sess:
         sess.run(init_op)
         x = tf.constant(x)
@@ -238,6 +238,7 @@ def parse_params(params_str):
 
 def get_squeezer_by_name(name, func_type):
     squeezer_list = ['none',
+                     'bit_depth_random',
                      'bit_depth',
                      'binary_filter',
                      'binary_random_filter',
@@ -245,6 +246,7 @@ def get_squeezer_by_name(name, func_type):
                      'otsu_binarize',
                      'median_filter',
                      'median_random_filter',
+                     'median_random_size_filter',
                      'non_local_means_bw',
                      'non_local_means_color',
                      'adaptive_bilateral_filter',

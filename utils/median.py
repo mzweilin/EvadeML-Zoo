@@ -22,7 +22,9 @@ def neighborhood(x, kh, kw):
                                                'VALID'),
                       (xs[0], xs[1], xs[2], kh, kw, xs[3]))
 
-def median_filter(x, kh, kw):
+def median_filter(x, kh, kw=-1):
+    if kw == -1:
+        kw = kh
     neigh_size = kh * kw
     xs = tf.shape(x)
     # get neighborhoods in shape (whatever, neigh_size)
@@ -118,25 +120,26 @@ def median_random_size_filter(x, kh, kw):
     # Get two/multiple x_mid, randomly select from one .
     s0 = median_filter_no_reshape(x, 2, 2)
     s1 = median_filter_no_reshape(x, 3, 3)
-    s2 = median_filter_no_reshape(x, 4, 4)
+    # s2 = median_filter_no_reshape(x, 4, 4)
 
     xs = tf.shape(x)
     nb_pixels = xs[0] * xs[1] * xs[2] * xs[3]
-    samples_mnd = tf.squeeze(tf.multinomial(tf.log([[10., 10., 10.]]), nb_pixels))
+    samples_mnd = tf.squeeze(tf.multinomial(tf.log([[10., 10.]]), nb_pixels))
 
     # return tf.constant([0]*nb_pixels, dtype=tf.int64)
     zeros = tf.zeros([nb_pixels], dtype=tf.int64)
     ones = tf.ones([nb_pixels], dtype=tf.int64)
-    twos = tf.ones([nb_pixels], dtype=tf.int64)*2
+    # twos = tf.ones([nb_pixels], dtype=tf.int64)*2
     # tmp = tf.cast(tf.equal(samples_mnd, tf.zeros([nb_pixels], dtype=tf.int64)), tf.int64)
     # return zeros, ones, twos
 
-    selected_0 = tf.cast(tf.equal(samples_mnd, zeros), tf.float32)
-    selected_1 = tf.cast(tf.equal(samples_mnd, ones), tf.float32)
-    selected_2 = tf.cast(tf.equal(samples_mnd, twos), tf.float32)
+    selected_0 = tf.cast(tf.equal(samples_mnd, zeros), tf.float64)
+    selected_1 = tf.cast(tf.equal(samples_mnd, ones), tf.float64)
+    # selected_2 = tf.cast(tf.equal(samples_mnd, twos), tf.float32)
 
     # return s0, selected_0
-    x_mid = tf.add_n( [tf.multiply(s0, selected_0), tf.multiply(s1, selected_1), tf.multiply(s2, selected_2)] )
+    # x_mid = tf.add_n( [tf.multiply(s0, selected_0), tf.multiply(s1, selected_1), tf.multiply(s2, selected_2)] )
+    x_mid = tf.add_n( [tf.multiply(s0, selected_0), tf.multiply(s1, selected_1)] )
 
     return tf.reshape(x_mid, (xs[0], xs[1], xs[2], xs[3]))
 
