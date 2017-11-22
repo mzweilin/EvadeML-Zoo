@@ -1,3 +1,8 @@
+"""
+The model is adapted from
+  https://github.com/MadryLab/mnist_challenge/blob/master/model.py
+"""
+
 from keras.models import Sequential
 from keras.layers import Lambda, Conv2D, MaxPooling2D, Reshape, Dense, Activation
 
