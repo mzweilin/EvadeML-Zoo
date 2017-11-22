@@ -15,11 +15,11 @@ def cleverhans_mnist_model(logits=False, input_range_type=1, pre_filter=lambda x
     return cleverhans_model(input_shape, nb_filters, nb_classes, logits, input_range_type, pre_filter)
 
 
-def cleverhans_cifar10_model(logits=False, input_range_type=1):
+def cleverhans_cifar10_model(logits=False, input_range_type=1, pre_filter=lambda x:x):
     input_shape = (32, 32, 3)
     nb_filters = 64
     nb_classes = 10
-    return cleverhans_model(input_shape, nb_filters, nb_classes, logits, input_range_type)
+    return cleverhans_model(input_shape, nb_filters, nb_classes, logits, input_range_type, pre_filter)
 
 
 def cleverhans_model(input_shape, nb_filters, nb_classes, logits, input_range_type, pre_filter):
