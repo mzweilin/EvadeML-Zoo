@@ -7,6 +7,8 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datasets import calculate_accuracy
+from datasets.visualization import show_imgs_in_rows
+
 
 class RobustClassifierBase:
     def __init__(self, model, rc_name):
@@ -16,20 +18,27 @@ class RobustClassifierBase:
         return self.model_predict(X)
 
 from .feature_squeezing import FeatureSqueezingRC
+from .magnet import MagNetRC
 
 def get_robust_classifier_by_name(model, rc_name):
-    if rc_name.startswith('Base'):
+    if rc_name.startswith('Base') or rc_name.startswith('none'):
         rc = RobustClassifierBase(model, rc_name)
     elif rc_name.startswith("FeatureSqueezing"):
         rc = FeatureSqueezingRC(model, rc_name)
+    elif rc_name.startswith("MagNet"):
+        rc = MagNetRC(model, rc_name)
+    else:
+        raise Exception("Unknown robust classifier [%s]" % rc)
     return rc
 
-def evaluate_robustness(params_str, model, Y, X, attack_string_list, X_adv_list, csv_fpath):
+def evaluate_robustness(params_str, model, Y, X, Y_adv, attack_string_list, X_adv_list, csv_fpath, selected_idx_vis, result_folder):
     RC_names = [ele.strip() for ele in params_str.split(';') if ele.strip()!= '']
-    Y_adv = Y[:len(X_adv_list[0])]
 
     accuracy_rows = []
     fieldnames = ['RobustClassifier', 'legitimate_%d' % len(X)] + attack_string_list
+
+    selected_idx_vis = selected_idx_vis[:10]
+    legitimate_examples = X[selected_idx_vis]
 
     for RC_name in RC_names:
         rc = get_robust_classifier_by_name(model, RC_name)
@@ -39,13 +48,25 @@ def evaluate_robustness(params_str, model, Y, X, attack_string_list, X_adv_list,
         accuracy = calculate_accuracy(rc.predict(X), Y)
         accuracy_rec['legitimate_%d' % len(X)] = accuracy
 
+        squeezer_name = RC_name[RC_name.find('=')+1:]
+        img_fpath = os.path.join(result_folder, 'RC_%s_examples.png' % (squeezer_name) )
+        rows = [legitimate_examples]
+
         for i, attack_name in enumerate(attack_string_list):
             X_adv = X_adv_list[i]
-            Y_pred_adv = rc.predict(X_adv)
+            if hasattr(rc, 'visualize_and_predict'):
+                X_adv_filtered, Y_pred_adv = rc.visualize_and_predict(X_adv)
+                rows += map(lambda x:x[selected_idx_vis], [X_adv, X_adv_filtered])
+            else:
+                Y_pred_adv = rc.predict(X_adv)
             accuracy = calculate_accuracy(Y_pred_adv, Y_adv)
             accuracy_rec[attack_name] = accuracy        
 
         accuracy_rows.append(accuracy_rec)
+
+        # Visualize the filtered images.
+        if len(rows) > 1:
+            show_imgs_in_rows(rows, img_fpath)
 
     # Output in a CSV file.
     import csv

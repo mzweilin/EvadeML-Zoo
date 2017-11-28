@@ -15,9 +15,14 @@ class FeatureSqueezingRC:
         self.model_predict = lambda x: keras_model.predict(x)
         subject, params = parse_params(rc_name)
         assert subject == 'FeatureSqueezing'
-        self.filter = get_squeezer_by_name(params['squeezer'], 'python')        
+        self.filter = get_squeezer_by_name(params['squeezer'], 'python')
 
     def predict(self, X):
         X_filtered = self.filter(X)
         Y_pred = self.model_predict(X_filtered)
         return Y_pred
+
+    def visualize_and_predict(self, X):
+        X_filtered = self.filter(X)
+        Y_pred = self.model_predict(X_filtered)
+        return X_filtered, Y_pred
