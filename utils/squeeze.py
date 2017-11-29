@@ -213,6 +213,23 @@ def adaptive_bilateral_filter_tf(imgs, ksize, sigmaSpace, maxSigmaColor=20.0):
 none_tf = none_py = lambda x:x
 
 
+import sys, os
+project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_path)
+
+from externals.MagNet.worker import SimpleReformer
+mnist_autoencoder_fpath = os.path.join(project_path, "downloads/MagNet/defensive_models/MNIST_I")
+cifar10_autoencoder_fpath = os.path.join(project_path, "downloads/MagNet/defensive_models/CIFAR")
+
+reformer_mnist = SimpleReformer(mnist_autoencoder_fpath)
+reformer_cifar10 = SimpleReformer(cifar10_autoencoder_fpath)
+
+def magnet_mnist_py(imgs):
+    return reformer_mnist.heal(imgs)
+
+def magnet_cifar10_py(imgs):
+    return reformer_cifar10.heal(imgs)
+
 # Construct a name search function.
 def isfloat(value):
     try:
@@ -251,6 +268,8 @@ def get_squeezer_by_name(name, func_type):
                      'non_local_means_color',
                      'adaptive_bilateral_filter',
                      'bilateral_filter',
+                     'magnet_mnist',
+                     'magnet_cifar10',
                     ]
 
     for squeezer_name in squeezer_list:
