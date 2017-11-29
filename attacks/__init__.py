@@ -11,25 +11,7 @@ from .cleverhans_wrapper import generate_fgsm_examples, generate_jsma_examples, 
 from .carlini_wrapper import generate_carlini_l2_examples, generate_carlini_li_examples, generate_carlini_l0_examples
 from .deepfool_wrapper import generate_deepfool_examples, generate_universal_perturbation_examples
 from .adaptive.adaptive_adversary import generate_adaptive_carlini_l2_examples
-
-def isfloat(value):
-    try:
-        float(value)
-        return True
-    except:
-        return False
-
-
-def get_next_class(Y_test):
-    num_classes = Y_test.shape[1]
-    Y_test_labels = np.argmax(Y_test, axis=1)
-    Y_test_labels = (Y_test_labels + 1) % num_classes
-    return np.eye(num_classes)[Y_test_labels]
-
-def get_least_likely_class(Y_pred):
-    num_classes = Y_pred.shape[1]
-    Y_target_labels = np.argmin(Y_pred, axis=1)
-    return np.eye(num_classes)[Y_target_labels]
+from .pgd.pgd_wrapper import generate_pgdli_examples
 
 
 # TODO: replace pickle with .h5 for Python 2/3 compatibility issue.
@@ -55,30 +37,10 @@ def maybe_generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_par
     return X_adv, duration
 
 
-def parse_attack_string(attack_string):
-    if '?' in attack_string:
-        attack_name, attack_params = attack_string.split('?')
-    else:
-        attack_name, attack_params = attack_string, ''
-    attack_name = attack_name.lower()
-    attack_params = urlparse.parse_qs(attack_params)
-    attack_params = dict( (k, v if len(v)>1 else v[0] ) for k,v in attack_params.items())
-
-    for k,v in attack_params.items():
-        if k in ['batch_size', 'max_iterations', 'num_classes', 'max_iter', 'nb_iter', 'max_iter_df']:
-            attack_params[k] = int(v)
-        elif v == 'true':
-            attack_params[k] = True
-        elif v == 'false':
-            attack_params[k] = False
-        elif v == 'inf':
-            attack_params[k] = np.inf
-        elif isfloat(v):
-            attack_params[k] = float(v)
-    return attack_name, attack_params
-
 def generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, verbose, attack_log_fpath):
-    if attack_name == 'fgsm':
+    if attack_name == 'none':
+        return X
+    elif attack_name == 'fgsm':
         generate_adv_examples_func = generate_fgsm_examples
     elif attack_name == 'jsma':
         generate_adv_examples_func = generate_jsma_examples
@@ -96,6 +58,8 @@ def generate_adv_examples(sess, model, x, y, X, Y, attack_name, attack_params, v
         generate_adv_examples_func = generate_universal_perturbation_examples
     elif attack_name == 'adaptive_carlini_l2':
         generate_adv_examples_func = generate_adaptive_carlini_l2_examples
+    elif attack_name == 'pgdli':
+        generate_adv_examples_func = generate_pgdli_examples
     else:
         raise NotImplementedError("Unsuported attack [%s]." % attack_name)
 
