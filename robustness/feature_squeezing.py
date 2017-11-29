@@ -15,7 +15,22 @@ class FeatureSqueezingRC:
         self.model_predict = lambda x: keras_model.predict(x)
         subject, params = parse_params(rc_name)
         assert subject == 'FeatureSqueezing'
-        self.filter = get_squeezer_by_name(params['squeezer'], 'python')
+
+        if params.has_key('squeezer'):
+            self.filter = get_squeezer_by_name(params['squeezer'], 'python')
+        elif params.has_key('squeezers'):
+            squeezer_names = params['squeezers'].split(',')
+            self.filters = [ get_squeezer_by_name(squeezer_name, 'python') for squeezer_name in squeezer_names ]
+
+            def filter_func(x, funcs):
+                x_p = x
+                for func in funcs:
+                    x_p = func(x_p)
+                return x_p
+
+            self.filter = lambda x: filter_func(x, self.filters)
+
+
 
     def predict(self, X):
         X_filtered = self.filter(X)
