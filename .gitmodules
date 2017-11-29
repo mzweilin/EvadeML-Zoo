@@ -21,3 +21,6 @@
 	path = externals/titu1994/DenseNet
 	url = https://github.com/titu1994/DenseNet.git
 	ignore = dirty
+[submodule "externals/MagNet"]
+	path = externals/MagNet
+	url = https://github.com/mzweilin/MagNet.git
