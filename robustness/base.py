@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import hashlib
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -31,7 +32,14 @@ def get_robust_classifier_by_name(model, rc_name):
         raise Exception("Unknown robust classifier [%s]" % rc)
     return rc
 
-def evaluate_robustness(params_str, model, Y, X, Y_adv, attack_string_list, X_adv_list, csv_fpath, selected_idx_vis, result_folder):
+def evaluate_robustness(params_str, model, Y, X, Y_adv, attack_string_list, X_adv_list, fname_prefix, selected_idx_vis, result_folder):
+    if not os.path.isdir(result_folder):
+        os.makedirs(result_folder)
+    robustness_string_hash = hashlib.sha1(params_str.encode('utf-8')).hexdigest()[:5]
+    csv_fname = "%s_%s.csv" % (fname_prefix, robustness_string_hash)
+    csv_fpath = os.path.join(result_folder, csv_fname)
+    print ("Saving robustness test results at %s" % csv_fpath)
+
     RC_names = [ele.strip() for ele in params_str.split(';') if ele.strip()!= '']
 
     accuracy_rows = []
@@ -48,8 +56,7 @@ def evaluate_robustness(params_str, model, Y, X, Y_adv, attack_string_list, X_ad
         accuracy = calculate_accuracy(rc.predict(X), Y)
         accuracy_rec['legitimate_%d' % len(X)] = accuracy
 
-        squeezer_name = RC_name[RC_name.find('=')+1:]
-        img_fpath = os.path.join(result_folder, 'RC_%s_examples.png' % (squeezer_name) )
+        img_fpath = os.path.join(result_folder, '%s_%s.png' % (fname_prefix, RC_name) )
         rows = [legitimate_examples]
 
         for i, attack_name in enumerate(attack_string_list):
