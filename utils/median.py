@@ -164,21 +164,21 @@ if __name__ == '__main__':
                         [[1, 24], [2, 25], [3, 26], [11, 27]],
                         [[12, 28], [13, 29], [14, 30], [15, 31]]]], dtype=np.float32)
 
-    print "vec:", vec
+    print ("vec:", vec)
     mnp = ndimage.filters.median_filter(vec, size=(1, 3, 3, 1), mode='reflect')
-    print "mnp", mnp
+    print ("mnp", mnp)
     mtf = sess.run(f, feed_dict={X: vec})
-    print "mtf", mtf
+    print ("mtf", mtf)
 
     
     mtf_rand_1 = sess.run(f_rand, feed_dict={X: vec})
     mtf_rand_2 = sess.run(f_rand, feed_dict={X: vec})
-    print "mtf_rand_1", mtf_rand_1
-    print "mtf_rand_2", mtf_rand_2
+    print ("mtf_rand_1", mtf_rand_1)
+    print ("mtf_rand_2", mtf_rand_2)
 
-    print "equal", np.array_equal(mnp, mtf)
-    print "equal", np.array_equal(mnp, mtf_rand_1)
-    print "equal", np.array_equal(mtf_rand_1, mtf_rand_2)
+    print ("equal", np.array_equal(mnp, mtf))
+    print ("equal", np.array_equal(mnp, mtf_rand_1))
+    print ("equal", np.array_equal(mtf_rand_1, mtf_rand_2))
     
     # print sess.run(g, feed_dict={X: vec})
 
