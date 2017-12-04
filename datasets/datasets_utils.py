@@ -1,5 +1,5 @@
 import numpy as np
-import functools
+from functools import reduce
 import pdb
 
 from .visualization import show_imgs_in_rows
@@ -89,7 +89,7 @@ def calculate_mean_distance(X1, X2):
     mean_l0_dist_value = mean_l0_dist_value / (img_size*nb_channels)
 
     diff_channel_list = np.split(X1-X2 != 0, nb_channels, axis=3)
-    l0_channel_dependent_list = np.sum(functools.reduce(lambda x,y: x|y, diff_channel_list), axis = (1,2,3))
+    l0_channel_dependent_list = np.sum(reduce(lambda x,y: x|y, diff_channel_list), axis = (1,2,3))
     mean_l0_dist_pixel = np.mean(l0_channel_dependent_list) / img_size
 
     return mean_l2_dist, mean_li_dist, mean_l0_dist_value, mean_l0_dist_pixel
