@@ -244,7 +244,7 @@ def adaptive_CarliniL2(sess, model, X, Y_target, eval_dir, batch_size, confidenc
         sess.run(tf.variables_initializer([x_star_tanh] + optimizer_variables))
         tf.assert_variables_initialized()
 
-        print coeff_curr_log # %%%
+        print (coeff_curr_log) # %%%
         curr_coeff = np.exp(coeff_curr_log)
         # Initially, all are failed adversarial examples.
         all_fail = np.ones((N0,), dtype=np.bool)
