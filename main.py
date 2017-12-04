@@ -18,14 +18,22 @@ from tensorflow.python.platform import flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('dataset_name', 'MNIST', 'Supported: MNIST, CIFAR-10, ImageNet.')
-flags.DEFINE_integer('nb_examples', 100, 'The number of examples selected for attacks.')
-flags.DEFINE_boolean('test_mode', False, 'Only select one sample for each class.')
 flags.DEFINE_string('model_name', 'cleverhans', 'Supported: cleverhans, cleverhans_adv_trained and carlini for MNIST; carlini and DenseNet for CIFAR-10;  ResNet50, VGG19, Inceptionv3 and MobileNet for ImageNet.')
+
+flags.DEFINE_boolean('select', True, 'Select correctly classified examples for the experiement.')
+flags.DEFINE_integer('nb_examples', 100, 'The number of examples selected for attacks.')
+flags.DEFINE_boolean('balance_sampling', False, 'Select the same number of examples for each class.')
+flags.DEFINE_boolean('test_mode', False, 'Only select one sample for each class.')
+
 flags.DEFINE_string('attacks', "FGSM?eps=0.1;BIM?eps=0.1&eps_iter=0.02;JSMA?targeted=next;CarliniL2?targeted=next&batch_size=100&max_iterations=1000;CarliniL2?targeted=next&batch_size=100&max_iterations=1000&confidence=2", 'Attack name and parameters in URL style, separated by semicolon.')
+flags.DEFINE_float('clip', -1, 'L-infinity clip on the adversarial perturbations.')
 flags.DEFINE_boolean('visualize', True, 'Output the image examples for each attack, enabled by default.')
-flags.DEFINE_float('clip', 0, 'L-infinity clip on the adversarial perturbations.')
+
 flags.DEFINE_string('robustness', '', 'Supported: FeatureSqueezing.')
+
 flags.DEFINE_string('detection', '', 'Supported: feature_squeezing.')
+flags.DEFINE_boolean('detection_train_test_mode', True, 'Split into train/test datasets.')
+
 flags.DEFINE_string('result_folder', "results", 'The output folder for results.')
 flags.DEFINE_boolean('verbose', False, 'Stdout level. The hidden content will be saved to log files anyway.')
 
@@ -95,23 +103,33 @@ def main(argv=None):
 
     # 4. Select some examples to attack.
     import hashlib
-    from datasets import get_first_example_id_each_class
-    # Filter out the misclassified examples.
-    correct_idx = get_correct_prediction_idx(Y_pred_all, Y_test_all)
-    if FLAGS.test_mode:
-        # Only select the first example of each class.
-        correct_and_selected_idx = get_first_example_id_each_class(Y_test_all[correct_idx])
-        selected_idx = [ correct_idx[i] for i in correct_and_selected_idx ]
+    from datasets import get_first_n_examples_id_each_class
+
+    if FLAGS.select:
+        # Filter out the misclassified examples.
+        correct_idx = get_correct_prediction_idx(Y_pred_all, Y_test_all)
+        if FLAGS.test_mode:
+            # Only select the first example of each class.
+            correct_and_selected_idx = get_first_n_examples_id_each_class(Y_test_all[correct_idx])
+            selected_idx = [ correct_idx[i] for i in correct_and_selected_idx ]
+        else:
+            if not FLAGS.balance_sampling:
+                selected_idx = correct_idx[:FLAGS.nb_examples]
+            else:
+                # select the same number of examples for each class label.
+                nb_examples_per_class = int(FLAGS.nb_examples / Y_test_all.shape[1])
+                correct_and_selected_idx = get_first_n_examples_id_each_class(Y_test_all[correct_idx], n=nb_examples_per_class)
+                selected_idx = [ correct_idx[i] for i in correct_and_selected_idx ]
     else:
-        selected_idx = correct_idx[:FLAGS.nb_examples]
+        selected_idx = np.array(range(FLAGS.nb_examples))
 
     from utils.output import format_number_range
     selected_example_idx_ranges = format_number_range(sorted(selected_idx))
     print ( "Selected %d examples." % len(selected_idx))
     print ( "Selected index in test set (sorted): %s" % selected_example_idx_ranges )
-
     X_test, Y_test, Y_pred = X_test_all[selected_idx], Y_test_all[selected_idx], Y_pred_all[selected_idx]
 
+    # The accuracy should be 100%.
     accuracy_selected = calculate_accuracy(Y_pred, Y_test)
     mean_conf_selected = calculate_mean_confidence(Y_pred, Y_test)
     print('Test accuracy on selected legitimate examples %.4f' % (accuracy_selected))
@@ -141,12 +159,13 @@ def main(argv=None):
 
 
     # 5. Generate adversarial examples.
-    from attacks import maybe_generate_adv_examples, parse_attack_string
+    from attacks import maybe_generate_adv_examples
     from utils.squeeze import reduce_precision_py
+    from utils.parameter_parser import parse_params
     attack_string_hash = hashlib.sha1(FLAGS.attacks.encode('utf-8')).hexdigest()[:5]
     sample_string_hash = task['test_set_selected_idx_hash'][:5]
 
-    from attacks import get_next_class, get_least_likely_class
+    from datasets.datasets_utils import get_next_class, get_least_likely_class
     Y_test_target_next = get_next_class(Y_test)
     Y_test_target_ll = get_least_likely_class(Y_pred)
 
@@ -167,7 +186,7 @@ def main(argv=None):
     predictions_fpath = os.path.join(predictions_folder, "legitimate.npy")
     np.save(predictions_fpath, Y_pred, allow_pickle=False)
 
-    if FLAGS.clip > 0:
+    if FLAGS.clip >= 0:
         epsilon = FLAGS.clip
         print ("Clip the adversarial perturbations by +-%f" % epsilon)
         max_clip = np.clip(X_test + epsilon, 0, 1)
@@ -175,7 +194,7 @@ def main(argv=None):
 
     for attack_string in attack_string_list:
         attack_log_fpath = os.path.join(adv_log_folder, "%s_%s.log" % (task_id, attack_string))
-        attack_name, attack_params = parse_attack_string(attack_string)
+        attack_name, attack_params = parse_params(attack_string)
         print ( "\nRunning attack: %s %s" % (attack_name, attack_params))
 
         if 'targeted' in attack_params:
@@ -199,9 +218,8 @@ def main(argv=None):
         X_test_adv, aux_info = maybe_generate_adv_examples(sess, model, x, y, X_test, Y_test_target, attack_name, attack_params, use_cache = x_adv_fpath, verbose=FLAGS.verbose, attack_log_fpath=attack_log_fpath)
 
         if FLAGS.clip > 0:
-            X_test_adv = np.clip(X_test_adv,
-                                          min_clip,
-                                          max_clip)
+            # This is L-inf clipping.
+            X_test_adv = np.clip(X_test_adv, min_clip, max_clip)
 
         X_test_adv_list.append(X_test_adv)
 
@@ -218,25 +236,15 @@ def main(argv=None):
         predictions_fpath = os.path.join(predictions_folder, "%s.npy"% attack_string)
         np.save(predictions_fpath, Y_test_adv_pred, allow_pickle=False)
 
-        # 5.1. Evaluate the quality of adversarial examples
-
-        print ("\n---Attack: %s" % attack_string)
-        rec = evaluate_adversarial_examples(X_test, X_test_adv, Y_test_target.copy(), targeted, Y_test_adv_pred)
-        print ("Duration per sample: %.1fs" % dur_per_sample)
-        rec['dataset_name'] = FLAGS.dataset_name
-        rec['model_name'] = FLAGS.model_name
-        rec['attack_string'] = attack_string
-        rec['duration_per_sample'] = dur_per_sample
-        rec['discretization'] = False
-        to_csv.append(rec)
-
-        # 5.2 Adversarial examples being discretized to uint8.
+        # 5.1 Evaluate the adversarial examples being discretized to uint8.
         print ("\n---Attack (uint8): %s" % attack_string)
+        # All data should be discretized to uint8.
         X_test_adv_discret = reduce_precision_py(X_test_adv, 256)
         X_test_adv_discretized_list.append(X_test_adv_discret)
         Y_test_adv_discret_pred = model.predict(X_test_adv_discret)
         Y_test_adv_discretized_pred_list.append(Y_test_adv_discret_pred)
-        rec = evaluate_adversarial_examples(X_test, X_test_adv_discret, Y_test_target.copy(), targeted, Y_test_adv_discret_pred)
+
+        rec = evaluate_adversarial_examples(X_test, Y_test, X_test_adv_discret, Y_test_target.copy(), targeted, Y_test_adv_discret_pred)
         rec['dataset_name'] = FLAGS.dataset_name
         rec['model_name'] = FLAGS.model_name
         rec['attack_string'] = attack_string
@@ -255,10 +263,11 @@ def main(argv=None):
 
     if FLAGS.visualize is True:
         from datasets.visualization import show_imgs_in_rows
-        if FLAGS.test_mode:
+        if FLAGS.test_mode or FLAGS.balance_sampling:
             selected_idx_vis = range(Y_test.shape[1])
         else:
-            selected_idx_vis = get_first_example_id_each_class(Y_test)
+            selected_idx_vis = get_first_n_examples_id_each_class(Y_test, 1)
+
         legitimate_examples = X_test[selected_idx_vis]
 
         rows = [legitimate_examples]
@@ -270,36 +279,33 @@ def main(argv=None):
 
         # TODO: output the prediction and confidence for each example, both legitimate and adversarial.
 
-    # All data should be discretized to uint8.
-    del X_test_adv_list
 
     # 6. Evaluate robust classification techniques.
-    # Example: --robustness "Base;FeatureSqueezing?squeezer=bit_depth_1;FeatureSqueezing?squeezer=median_filter_2;"
+    # Example: --robustness \
+    #           "Base;FeatureSqueezing?squeezer=bit_depth_1;FeatureSqueezing?squeezer=median_filter_2;"
     if FLAGS.robustness != '':
         """
         Test the accuracy with robust classifiers.
+        Evaluate the accuracy on all the legitimate examples.
         """
         from robustness import evaluate_robustness
-        robustness_string_hash = hashlib.sha1(FLAGS.robustness.encode('utf-8')).hexdigest()[:5]
-        csv_fpath = "%s_%s_robustness_%s.csv" % (task_id, attack_string_hash, robustness_string_hash)
-        print ("Saving robustness test results at %s" % csv_fpath)
-        csv_fpath = os.path.join(FLAGS.result_folder, csv_fpath)
-        evaluate_robustness(FLAGS.robustness, model, Y_test, X_test, attack_string_list, X_test_adv_discretized_list, csv_fpath)
+        result_folder_robustness = os.path.join(FLAGS.result_folder, "robustness")
+        fname_prefix = "%s_%s_robustness" % (task_id, attack_string_hash)
+        evaluate_robustness(FLAGS.robustness, model, Y_test_all, X_test_all, Y_test, \
+                attack_string_list, X_test_adv_discretized_list, 
+                fname_prefix, selected_idx_vis, result_folder_robustness)
+
 
     # 7. Detection experiment.
     # Example: --detection "FeatureSqueezing?distance_measure=l1&squeezers=median_smoothing_2,bit_depth_4,bilateral_filter_15_15_60;"
-
     if FLAGS.detection != '':
         from detections.base import DetectionEvaluator
 
+        result_folder_detection = os.path.join(FLAGS.result_folder, "detection")
         csv_fname = "%s_attacks_%s_detection.csv" % (task_id, attack_string_hash)
-        detection_csv_fpath = os.path.join(FLAGS.result_folder, csv_fname)
-        # TODO: Output csv results.
-
-        de = DetectionEvaluator(model, detection_csv_fpath)
+        de = DetectionEvaluator(model, result_folder_detection, csv_fname, FLAGS.dataset_name)
         Y_test_all_pred = model.predict(X_test_all)
-
-        de.build_detection_dataset(X_test_all, Y_test_all, Y_test_all_pred, X_test_adv_discretized_list, Y_test_adv_discretized_pred_list, attack_string_list, attack_string_hash)
+        de.build_detection_dataset(X_test_all, Y_test_all, Y_test_all_pred, X_test_adv_discretized_list, Y_test_adv_discretized_pred_list, attack_string_list, attack_string_hash, FLAGS.clip, Y_test_target_next, Y_test_target_ll)
         de.evaluate_detections(FLAGS.detection)
 
 
