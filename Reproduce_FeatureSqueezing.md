@@ -9,7 +9,7 @@
 }
 ```
 
-The script was created to help reproduce the results on the paper. The code was developed on Python 2, but should be runnable on Python 3 with tiny modifications.
+The note was created to help reproduce the results on the paper. The code was developed on Python 2, but should be runnable on Python 3 with tiny modifications.
 
 ## 1. Install dependencies.
 
@@ -98,7 +98,7 @@ python main.py --dataset_name ImageNet --model_name MobileNet --nb_examples 100 
 --detection "FeatureSqueezing?squeezers=bit_depth_5,median_filter_2_2,non_local_means_color_11_3_4&distance_measure=l1&fpr=0.05"
 ```
 
-## 7. Combined with Adversarial Training.
+## 7. Combine with Adversarial Training.
 ```bash
 # Compare with FGSM-based Adversarial Training.
 python main.py --dataset_name MNIST --model_name carlini --noselect --nb_examples 10000 \
@@ -126,7 +126,7 @@ python main.py --dataset_name MNIST --model_name pgdtrained --noselect --nb_exam
 # Evaluate with MNIST.
 python main.py --dataset_name MNIST --model_name carlini  \
 --attacks "fgsm?eps=0.3;bim?eps=0.3&eps_iter=0.06;carlinili?targeted=next&batch_size=1&max_iterations=1000&confidence=10;carlinili?targeted=ll&batch_size=1&max_iterations=1000&confidence=10;carlinil2?targeted=next&batch_size=100&max_iterations=1000&confidence=10;carlinil2?targeted=ll&batch_size=100&max_iterations=1000&confidence=10;carlinil0?targeted=next&batch_size=1&max_iterations=1000&confidence=10;carlinil0?targeted=ll&batch_size=1&max_iterations=1000&confidence=10;jsma?targeted=next;jsma?targeted=ll;" \
---detection "FeatureSqueezing?squeezers=bit_depth_1,median_filter_2_2&distance_measure=l1&threshold=1.2358;MagNet?"
+--detection "FeatureSqueezing?squeezers=bit_depth_1,median_filter_2_2&distance_measure=l1&threshold=1.2358;MagNet"
 ```
 
 ```bash
