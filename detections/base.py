@@ -297,9 +297,9 @@ class DetectionEvaluator:
             _, tpr, _, tp, ap = evalulate_detection_test(Y_nfae_all, Y_pred)
             fprs, tprs, thresholds = roc_curve(Y_nfae_all, Y_pred_score)
 
-            print ("threshold\tfpr\ttpr")
-            for i, threshold  in enumerate(thresholds):
-                print ("%.4f\t%.4f\t%.4f" % (threshold, fprs[i], tprs[i]))
+            # print ("threshold\tfpr\ttpr")
+            # for i, threshold  in enumerate(thresholds):
+            #     print ("%.4f\t%.4f\t%.4f" % (threshold, fprs[i], tprs[i]))
 
             roc_auc = auc(fprs, tprs)
             print ("Overall TPR: %f\tROC-AUC: %f" % (tpr, roc_auc))
