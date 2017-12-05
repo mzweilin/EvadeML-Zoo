@@ -226,7 +226,6 @@ def main(argv=None):
         if isinstance(aux_info, float):
             duration = aux_info
         else:
-            print (aux_info)
             duration = aux_info['duration']
 
         dur_per_sample = duration / len(X_test_adv)
