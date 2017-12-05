@@ -68,7 +68,7 @@ class DetectionEvaluator:
     def get_attack_id(self, attack_name):
         return self.attack_name_id[attack_name]
 
-    def build_detection_dataset(self, X, Y_label, Y_pred, X_adv_list, Y_adv_pred_list, attack_names, attack_string_hash, clip, Y_test_target_next, Y_test_target_ll):
+    def build_detection_dataset(self, X, Y_label, Y_pred, selected_idx, X_adv_list, Y_adv_pred_list, attack_names, attack_string_hash, clip, Y_test_target_next, Y_test_target_ll):
         # X_train, Y_train, X_test, Y_test, test_idx, failed_adv_idx = \
         #     get_detection_train_test_set(X, Y_label, X_adv_list, Y_adv_pred_list, attack_names)
 
@@ -88,7 +88,8 @@ class DetectionEvaluator:
         X_leg_all = X[:len(X_adv_all)]
 
         self.X_detect = X_detect = np.concatenate([X_leg_all, X_adv_all])
-        Y_label_adv = Y_label[:len(X_adv_list[0])]
+        # TODO: this could be wrong in non-default data selection mode.
+        Y_label_adv = Y_label[selected_idx]
 
         detection_db_path = os.path.join(self.task_dir, "detection_db_%s_clip_%s.json" % (attack_string_hash, clip))
 
