@@ -9,7 +9,7 @@ The goal of this project:
 
 The code was developed on Python 2, but should be runnable on Python 3 with tiny modifications.
 
-Please follow [the instructions](https://github.com/mzweilin/EvadeML-Zoo/blob/master/Reproduce_FeatureSqueezing.md) if you would like to reproduce the results on our Feature Squeezing paper.
+Please follow [the instructions](blob/master/Reproduce_FeatureSqueezing.md) if you would like to reproduce the results on our Feature Squeezing paper.
 
 
 ## 1. Install dependencies.
