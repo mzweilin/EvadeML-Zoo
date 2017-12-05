@@ -24,3 +24,4 @@
 [submodule "externals/MagNet"]
 	path = externals/MagNet
 	url = https://github.com/mzweilin/MagNet.git
+	ignore = dirty
