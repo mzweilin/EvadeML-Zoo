@@ -4,7 +4,7 @@
 @inproceedings{xu2018feature,
   title={{Feature Squeezing: Detecting Adversarial Examples in Deep Neural Networks}},
   author={Xu, Weilin and Evans, David and Qi, Yanjun},
-  booktitle={Proceedings of the 2018 Network and Distributed Systems Security Symposium},
+  booktitle={Proceedings of the 2018 Network and Distributed Systems Security Symposium (NDSS)},
   year={2018}
 }
 ```
@@ -33,7 +33,7 @@ mkdir downloads; curl -sL https://github.com/mzweilin/EvadeML-Zoo/releases/downl
 ```
 
 
-## 4. Download the pre-generated adversary examples. You may skip this step and generate adversary examples on your machine.
+## 4. Download the pre-generated adversary examples. You may skip this step and generate adversarial examples on your machine.
 ```bash
 mkdir results
 curl -sL https://github.com/mzweilin/EvadeML-Zoo/releases/download/v0.1/results_MNIST_100_317f6_carlini.tar.gz | tar xzv -C results
