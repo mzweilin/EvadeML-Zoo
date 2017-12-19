@@ -9,8 +9,7 @@ The goal of this project:
 
 The code was developed on Python 2, but should be runnable on Python 3 with tiny modifications.
 
-Please follow [the instructions](Reproduce_FeatureSqueezing.md) if you would like to reproduce the results on our Feature Squeezing paper.
-
+Please follow [the instructions](Reproduce_FeatureSqueezing.md) to reproduce the _**Feature Squeezing**_ results.
 
 ## 1. Install dependencies.
 
