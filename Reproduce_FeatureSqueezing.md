@@ -1,5 +1,7 @@
 # Feature Squeezing: Detecting Adversarial Examples in Deep Neural Networks
 
+![Feature Squeezing Detection Framework](https://xuweilin.org/publications/detection_framework.png)
+
 ```
 @inproceedings{xu2018feature,
   title={{Feature Squeezing: Detecting Adversarial Examples in Deep Neural Networks}},
@@ -9,7 +11,7 @@
 }
 ```
 
-The note was created to help reproduce the results on the paper. The code was developed on Python 2, but should be runnable on Python 3 with tiny modifications.
+The note was created to help reproduce the results of the [Feature Squeezing paper](https://arxiv.org/pdf/1704.01155.pdf). The code was developed on Python 2, but should be runnable on Python 3 with tiny modifications.
 
 ## 1. Install dependencies.
 
