@@ -93,3 +93,16 @@ python main.py --dataset_name MNIST --model_name carlini \
 --robustness "none;FeatureSqueezing?squeezer=bit_depth_1;" \
 --detection "FeatureSqueezing?squeezers=bit_depth_1,median_filter_2_2&distance_measure=l1&fpr=0.05;"
 ```
+
+## Cite this work
+
+You are encouraged to cite the following paper if you use `EvadeML-Zoo` for academic research.
+
+```
+@inproceedings{xu2018feature,
+  title={{Feature Squeezing: Detecting Adversarial Examples in Deep Neural Networks}},
+  author={Xu, Weilin and Evans, David and Qi, Yanjun},
+  booktitle={Proceedings of the 2018 Network and Distributed Systems Security Symposium (NDSS)},
+  year={2018}
+}
+```
