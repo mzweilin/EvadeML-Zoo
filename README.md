@@ -9,8 +9,7 @@ The goal of this project:
 
 The code was developed on Python 2, but should be runnable on Python 3 with tiny modifications.
 
-Please follow [the instructions](Reproduce_FeatureSqueezing.md) if you would like to reproduce the results on our Feature Squeezing paper.
-
+> Please follow [the instructions](Reproduce_FeatureSqueezing.md) to reproduce the _**Feature Squeezing**_ results.
 
 ## 1. Install dependencies.
 
@@ -93,4 +92,17 @@ python main.py --dataset_name MNIST --model_name carlini \
 --attacks "FGSM?eps=0.1;" \
 --robustness "none;FeatureSqueezing?squeezer=bit_depth_1;" \
 --detection "FeatureSqueezing?squeezers=bit_depth_1,median_filter_2_2&distance_measure=l1&fpr=0.05;"
+```
+
+## Cite this work
+
+You are encouraged to cite the following paper if you use `EvadeML-Zoo` for academic research.
+
+```
+@inproceedings{xu2018feature,
+  title={{Feature Squeezing: Detecting Adversarial Examples in Deep Neural Networks}},
+  author={Xu, Weilin and Evans, David and Qi, Yanjun},
+  booktitle={Proceedings of the 2018 Network and Distributed Systems Security Symposium (NDSS)},
+  year={2018}
+}
 ```
