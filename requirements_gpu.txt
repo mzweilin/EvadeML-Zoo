@@ -1,5 +1,6 @@
 tensorflow-gpu==1.1.0
 keras==2.0.4
+numpy==1.13.3
 matplotlib
 h5py
 pillow
