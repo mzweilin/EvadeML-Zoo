@@ -47,12 +47,12 @@ usage: python main.py [-h] [--dataset_name DATASET_NAME] [--model_name MODEL_NAM
 optional arguments:
   -h, --help            show this help message and exit
   --dataset_name DATASET_NAME
-                        Supported: MNIST, CIFAR-10, ImageNet.
+                        Supported: MNIST, CIFAR-10, ImageNet, SVHN.
   --model_name MODEL_NAME
                         Supported: cleverhans, cleverhans_adv_trained and
                         carlini for MNIST; carlini and DenseNet for CIFAR-10;
                         ResNet50, VGG19, Inceptionv3 and MobileNet for
-                        ImageNet.
+                        ImageNet; carlini for SVHN.
   --select [SELECT]     Select correctly classified examples for the
                         experiement.
   --noselect
