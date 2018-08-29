@@ -52,7 +52,7 @@ optional arguments:
                         Supported: cleverhans, cleverhans_adv_trained and
                         carlini for MNIST; carlini and DenseNet for CIFAR-10;
                         ResNet50, VGG19, Inceptionv3 and MobileNet for
-                        ImageNet; carlini for SVHN.
+                        ImageNet; tohinz for SVHN.
   --select [SELECT]     Select correctly classified examples for the
                         experiement.
   --noselect
