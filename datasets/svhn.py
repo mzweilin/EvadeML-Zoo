@@ -1,5 +1,7 @@
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append('datasets/svhn_dataset/')
+import download_svhn_data
 
 import numpy as np
 import scipy.io as sio
