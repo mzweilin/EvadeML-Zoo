@@ -32,7 +32,13 @@ git submodule update --init --recursive
 mkdir downloads; curl -sL https://github.com/mzweilin/EvadeML-Zoo/releases/download/v0.1/downloads.tar.gz | tar xzv -C downloads
 ```
 
-## 4. Usage of `python main.py`
+## 4. (Optional) Download the SVHN dataset and pre-trained model.
+```bash
+python datasets/svhn_dataset/download_svhn_data.py
+curl -sL https://github.com/mzweilin/EvadeML-Zoo/releases/download/v0.1/svhn_model_weights.tar.gz | tar xzv
+```
+
+## 5. Usage of `python main.py`
 ```
 usage: python main.py [-h] [--dataset_name DATASET_NAME] [--model_name MODEL_NAME]
                [--select [SELECT]] [--noselect] [--nb_examples NB_EXAMPLES]
