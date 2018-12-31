@@ -17,8 +17,8 @@ from tensorflow.python.platform import flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('dataset_name', 'MNIST', 'Supported: MNIST, CIFAR-10, ImageNet.')
-flags.DEFINE_string('model_name', 'cleverhans', 'Supported: cleverhans, cleverhans_adv_trained and carlini for MNIST; carlini and DenseNet for CIFAR-10;  ResNet50, VGG19, Inceptionv3 and MobileNet for ImageNet.')
+flags.DEFINE_string('dataset_name', 'MNIST', 'Supported: MNIST, CIFAR-10, ImageNet, SVHN.')
+flags.DEFINE_string('model_name', 'cleverhans', 'Supported: cleverhans, cleverhans_adv_trained and carlini for MNIST; carlini and DenseNet for CIFAR-10;  ResNet50, VGG19, Inceptionv3 and MobileNet for ImageNet; tohinz for SVHN.')
 
 flags.DEFINE_boolean('select', True, 'Select correctly classified examples for the experiement.')
 flags.DEFINE_integer('nb_examples', 100, 'The number of examples selected for attacks.')
@@ -52,7 +52,7 @@ def load_tf_session():
 
 def main(argv=None):
     # 0. Select a dataset.
-    from datasets import MNISTDataset, CIFAR10Dataset, ImageNetDataset
+    from datasets import MNISTDataset, CIFAR10Dataset, ImageNetDataset, SVHNDataset
     from datasets import get_correct_prediction_idx, evaluate_adversarial_examples, calculate_mean_confidence, calculate_accuracy
 
     if FLAGS.dataset_name == "MNIST":
@@ -61,6 +61,8 @@ def main(argv=None):
         dataset = CIFAR10Dataset()
     elif FLAGS.dataset_name == "ImageNet":
         dataset = ImageNetDataset()
+    elif FLAGS.dataset_name == "SVHN":
+        dataset = SVHNDataset()
 
 
     # 1. Load a dataset.

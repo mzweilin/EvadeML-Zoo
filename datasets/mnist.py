@@ -27,7 +27,6 @@ class MNISTDataset:
 
     def get_val_dataset(self):
         (X_train, y_train), (X_test, y_test) = mnist.load_data()
-
         val_size = 5000
         X_val = X_train[:val_size]
         X_val = X_val.reshape(X_val.shape[0], self.image_size, self.image_size, self.num_channels)
