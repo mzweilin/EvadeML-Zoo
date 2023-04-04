@@ -7,5 +7,5 @@ pillow
 scikit-learn
 click
 future
-opencv-python
+opencv-python==4.2.0.32
 tinydb
